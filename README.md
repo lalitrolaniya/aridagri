@@ -1,4 +1,4 @@
-# aridagri <img src="man/figures/logo.png" align="right" height="139" />
+# aridagri <img src="logo.png" align="right" height="139" />
 
 <!-- badges: start -->
 [![R-CMD-check](https://img.shields.io/badge/R--CMD--check-passing-brightgreen.svg)](https://cran.r-project.org/)
