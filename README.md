@@ -10,7 +10,7 @@
 
 ## Comprehensive Statistical Tools for Agricultural Research
 
-**aridagri** is a comprehensive R package providing **33+ functions** for statistical analysis in agricultural research, with special focus on experimental design analysis and agronomic calculations.
+**aridagri** is a comprehensive R package providing **33 functions** for statistical analysis in agricultural research, with special focus on experimental design analysis and agronomic calculations.
 
 ### Key Features
 
