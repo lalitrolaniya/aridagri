@@ -1,0 +1,29 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: "aridagri: Comprehensive Statistical Tools for Agricultural Research"
+version: 2.0.3
+date-released: 2026-02-24
+doi: 10.32614/CRAN.package.aridagri
+url: https://cran.r-project.org/package=aridagri
+repository-code: https://github.com/lalitrolaniya/aridagri
+license: GPL-3.0
+authors:
+  - family-names: Rolaniya
+    given-names: Lalit Kumar
+    orcid: https://orcid.org/0000-0001-8908-1211
+  - family-names: Jat
+    given-names: Ram Lal
+    orcid: https://orcid.org/0009-0003-4339-0555
+  - family-names: Punia
+    given-names: Monika
+    orcid: https://orcid.org/0009-0002-0294-6767
+  - family-names: Choudhary
+    given-names: Raja Ram
+keywords:
+  - agricultural statistics
+  - ANOVA
+  - R package
+  - stability analysis
+  - post-hoc tests
+  - experimental design
