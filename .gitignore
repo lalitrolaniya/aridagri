@@ -1,1 +1,18 @@
+# R related
+.Rhistory
+.Rdata
+.RData
+.Ruserdata
+.Rproj.user
 
+# Package build
+*.tar.gz
+*.Rcheck/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+*.swp
