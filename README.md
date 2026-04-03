@@ -5,6 +5,7 @@
 [![License: GPL-3](https://img.shields.io/badge/License-GPL3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![CRAN](https://www.r-pkg.org/badges/version/aridagri)](https://cran.r-project.org/package=aridagri)
 [![DOI](https://img.shields.io/badge/DOI-10.32614/CRAN.package.aridagri-blue)](https://doi.org/10.32614/CRAN.package.aridagri)
+[![Downloads](https://cranlogs.r-pkg.org/badges/grand-total/aridagri)](https://cran.r-project.org/package=aridagri)
 <!-- badges: end -->
 
 ## Comprehensive Statistical Tools for Agricultural Research
