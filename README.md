@@ -37,7 +37,7 @@ devtools::install_github("lalitrolaniya/aridagri")
 
 ## Function Overview
 
-### Experimental Design ANOVA (17 Functions)
+### Experimental Design ANOVA (16 Functions)
 
 | Function | Design |
 |----------|--------|
@@ -58,7 +58,7 @@ devtools::install_github("lalitrolaniya/aridagri")
 | `anova_augmented()` | Augmented Block Design |
 | `anova_alpha_lattice()` | Alpha Lattice Design |
 
-### Post-Hoc Tests (8 Methods)
+### Post-Hoc Tests (7 Methods)
 
 All available via `perform_posthoc()`:
 - Fisher's LSD
