@@ -422,6 +422,13 @@ anova_factorial <- function(data, response, factor1, factor2,
     formula_fact <- as.formula(paste(response, "~", factor1, "*", factor2))
   }
   
+  # Check for balanced design
+  expected_n <- a * b * r
+  if (abs(N - expected_n) > 0.5) {
+    warning("Unbalanced design detected: expected ", expected_n, " observations but found ", N, ". ",
+            "Results assume balanced data and may be unreliable.", call. = FALSE)
+  }
+  
   # Fit model
   model <- aov(formula_fact, data = data)
   anova_table <- anova(model)
@@ -572,6 +579,13 @@ anova_latin <- function(data, response, treatment, row, column,
   # Get dimensions
   t <- nlevels(data[[treatment]])
   N <- nrow(data)
+  
+  # Check for balanced design (Latin square requires t x t observations)
+  if (N != t * t) {
+    warning("Unbalanced design detected: Latin square expects ", t * t, " observations (", 
+            t, " x ", t, ") but found ", N, ". ",
+            "Results assume balanced data and may be unreliable.", call. = FALSE)
+  }
   
   # Fit model
   formula_lsd <- as.formula(paste(response, "~", row, "+", column, "+", treatment))

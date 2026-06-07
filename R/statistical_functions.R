@@ -43,6 +43,12 @@ anova_sspd <- function(data, response, main_plot, sub_plot, sub_sub_plot, replic
   # Total degrees of freedom
   N <- nrow(data)
   
+  # Check for balanced design
+  if (N != a * b * c * r) {
+    warning("Unbalanced design detected: expected ", a * b * c * r, " observations but found ", N, ". ",
+            "Results assume balanced data and may be unreliable.", call. = FALSE)
+  }
+  
   # Build formula for complete model
   formula_full <- as.formula(paste(response, "~", replication, "+", 
                                     main_plot, "+", replication, ":", main_plot, "+",

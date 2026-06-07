@@ -48,6 +48,12 @@ anova_strip <- function(data, response, horizontal_factor, vertical_factor,
   r <- nlevels(data[[replication]])
   N <- nrow(data)
   
+  # Check for balanced design
+  if (N != a * b * r) {
+    warning("Unbalanced design detected: expected ", a * b * r, " observations but found ", N, ". ",
+            "Results assume balanced data and may be unreliable.", call. = FALSE)
+  }
+  
   # Grand mean
   grand_mean <- mean(data[[response]], na.rm = TRUE)
   
@@ -169,6 +175,13 @@ anova_factorial_3way <- function(data, response, factor1, factor2, factor3,
   } else {
     r <- N / (a * b * c)
     formula_fact <- as.formula(paste(response, "~", factor1, "*", factor2, "*", factor3))
+  }
+  
+  # Check for balanced design
+  expected_n <- a * b * c * r
+  if (abs(N - expected_n) > 0.5) {
+    warning("Unbalanced design detected: expected ", expected_n, " observations but found ", N, ". ",
+            "Results assume balanced data and may be unreliable.", call. = FALSE)
   }
   
   # Fit model
@@ -466,6 +479,12 @@ anova_sspd_pooled <- function(data, response, main_plot, sub_plot, sub_sub_plot,
   e <- nlevels(data[[environment]])
   r <- nlevels(data[[replication]])
   N <- nrow(data)
+  
+  # Check for balanced design
+  if (N != a * b * c * e * r) {
+    warning("Unbalanced design detected: expected ", a * b * c * e * r, " observations but found ", N, ". ",
+            "Results assume balanced data and may be unreliable.", call. = FALSE)
+  }
   
   if (verbose) {
     cat("\n")

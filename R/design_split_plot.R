@@ -50,6 +50,14 @@ anova_spd <- function(data, response, main_plot, sub_plot, replication,
   r <- nlevels(data[[replication]])    # Replications
   N <- nrow(data)
   
+  # Check for balanced design
+  if (N != a * b * r) {
+    warning("Unbalanced design detected: expected ", a * b * r, " observations (", 
+            a, " main-plot x ", b, " sub-plot x ", r, " reps) but found ", N, ". ",
+            "Results assume balanced data and may be unreliable. ",
+            "Consider using lme4::lmer() for unbalanced data.", call. = FALSE)
+  }
+  
   # Fit full model
   formula_spd <- as.formula(paste(response, "~", replication, "+", 
                                    main_plot, "+", replication, ":", main_plot, "+",
@@ -329,6 +337,12 @@ anova_spd_ab_main <- function(data, response, main_factor1, main_factor2,
   r <- nlevels(data[[replication]])
   N <- nrow(data)
   
+  # Check for balanced design
+  if (N != a * b * c * r) {
+    warning("Unbalanced design detected: expected ", a * b * c * r, " observations but found ", N, ". ",
+            "Results assume balanced data and may be unreliable.", call. = FALSE)
+  }
+  
   # Create main plot combination
   data$main_plot <- interaction(data[[main_factor1]], data[[main_factor2]])
   m <- nlevels(data$main_plot)  # Number of main plot treatments (a  b)
@@ -526,6 +540,12 @@ anova_spd_c_main_ab_sub <- function(data, response, main_plot, sub_factor1,
   r <- nlevels(data[[replication]])
   N <- nrow(data)
   
+  # Check for balanced design
+  if (N != c_levels * a * b * r) {
+    warning("Unbalanced design detected: expected ", c_levels * a * b * r, " observations but found ", N, ". ",
+            "Results assume balanced data and may be unreliable.", call. = FALSE)
+  }
+  
   # Fit model
   formula_spd <- as.formula(paste(response, "~", replication, "+",
                                    main_plot, "+", replication, ":", main_plot, "+",
@@ -667,6 +687,12 @@ anova_spd_ab_cd <- function(data, response, main_factor1, main_factor2,
   r <- nlevels(data[[replication]])
   N <- nrow(data)
   
+  # Check for balanced design
+  if (N != a * b * c * d * r) {
+    warning("Unbalanced design detected: expected ", a * b * c * d * r, " observations but found ", N, ". ",
+            "Results assume balanced data and may be unreliable.", call. = FALSE)
+  }
+  
   # Create combination factors
   data$main_comb <- interaction(data[[main_factor1]], data[[main_factor2]])
   
@@ -788,6 +814,12 @@ anova_spd_pooled <- function(data, response, main_plot, sub_plot,
   e <- nlevels(data[[environment]])
   r <- nlevels(data[[replication]])
   N <- nrow(data)
+  
+  # Check for balanced design
+  if (N != a * b * e * r) {
+    warning("Unbalanced design detected: expected ", a * b * e * r, " observations but found ", N, ". ",
+            "Results assume balanced data and may be unreliable.", call. = FALSE)
+  }
   
   # Individual environment analyses
   env_levels <- levels(data[[environment]])

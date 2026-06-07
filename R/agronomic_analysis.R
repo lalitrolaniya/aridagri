@@ -341,46 +341,101 @@ stability_analysis <- function(data, genotype, environment, replication,
     results$superiority <- stability_sup
   }
   
-  # INTEGRATED RANKING
-  if (verbose) {
-    cat("\n\n")
-    cat("                        INTEGRATED STABILITY RANKING                                \n")
-    cat("\n")
+  # INTEGRATED RANKING (all 7 methods)
+  if (method == "all") {
+    if (verbose) {
+      cat("\n\n")
+      cat("                        INTEGRATED STABILITY RANKING                                \n")
+      cat("\n")
+    }
+
+    integrated <- data.frame(Genotype = rownames(ge_matrix))
+    integrated$Mean <- round(rowMeans(ge_matrix), 2)
+
+    # 1. Eberhart-Russell: rank by S2di (lower = more stable)
+    env_index <- colMeans(ge_matrix) - grand_mean
+    s2di_temp <- numeric(g)
+    for (i in 1:g) {
+      y <- ge_matrix[i, ]
+      reg <- lm(y ~ env_index)
+      s2di_temp[i] <- sum((y - predict(reg))^2) / max(e - 2, 1)
+    }
+    integrated$ER <- rank(s2di_temp)
+
+    # 2. AMMI: rank by AMMI Stability Value (lower ASV = more stable)
+    interaction_mat <- ge_matrix
+    for (i in 1:g) {
+      for (j in 1:e) {
+        interaction_mat[i, j] <- ge_matrix[i, j] -
+          rowMeans(ge_matrix)[i] - colMeans(ge_matrix)[j] + grand_mean
+      }
+    }
+    svd_res <- svd(interaction_mat)
+    if (length(svd_res$d) >= 2) {
+      pc1 <- svd_res$u[, 1] * svd_res$d[1]
+      pc2 <- svd_res$u[, 2] * svd_res$d[2]
+      wt <- (svd_res$d[1]^2) / (svd_res$d[2]^2)
+      asv_temp <- sqrt(wt * pc1^2 + pc2^2)
+    } else {
+      asv_temp <- abs(svd_res$u[, 1] * svd_res$d[1])
+    }
+    integrated$AMMI <- rank(asv_temp)
+
+    # 3. Finlay-Wilkinson: rank by |bi - 1| (closer to 1 = more stable)
+    env_means_fw <- colMeans(ge_matrix)
+    bi_fw_temp <- numeric(g)
+    for (i in 1:g) {
+      reg <- lm(ge_matrix[i, ] ~ env_means_fw)
+      bi_fw_temp[i] <- coef(reg)[2]
+    }
+    integrated$FW <- rank(abs(bi_fw_temp - 1))
+
+    # 4. Shukla: rank by stability variance (lower = more stable)
+    sigma2_temp <- numeric(g)
+    for (i in 1:g) {
+      interaction <- ge_matrix[i, ] - rowMeans(ge_matrix)[i] -
+        colMeans(ge_matrix) + grand_mean
+      sigma2_temp[i] <- sum(interaction^2) / (e - 1)
+    }
+    integrated$Shukla <- rank(sigma2_temp)
+
+    # 5. Wricke: rank by ecovalence Wi (lower = more stable)
+    Wi_temp <- numeric(g)
+    for (i in 1:g) {
+      interaction <- ge_matrix[i, ] - rowMeans(ge_matrix)[i] -
+        colMeans(ge_matrix) + grand_mean
+      Wi_temp[i] <- sum(interaction^2)
+    }
+    integrated$Wricke <- rank(Wi_temp)
+
+    # 6. CV: rank by coefficient of variation (lower = more stable)
+    cv_temp <- apply(ge_matrix, 1, sd) / rowMeans(ge_matrix) * 100
+    integrated$CV <- rank(cv_temp)
+
+    # 7. Lin-Binns: rank by superiority index Pi (lower = more superior)
+    max_env <- apply(ge_matrix, 2, max)
+    Pi_temp <- numeric(g)
+    for (i in 1:g) {
+      Pi_temp[i] <- sum((ge_matrix[i, ] - max_env)^2) / (2 * e)
+    }
+    integrated$LB <- rank(Pi_temp)
+
+    # Compute integrated rank as mean of all 7 method ranks
+    rank_cols <- c("ER", "AMMI", "FW", "Shukla", "Wricke", "CV", "LB")
+    integrated$Rank <- rank(rowMeans(integrated[, rank_cols]))
+    integrated <- integrated[order(integrated$Rank), ]
+
+    if (verbose) {
+      print(integrated, row.names = FALSE)
+      cat("\n ER=Eberhart-Russell AMMI=AMMI FW=Finlay-Wilkinson\n")
+      cat(" Shukla=Stability var CV=CV method Wricke=Ecovalence LB=Lin-Binns\n")
+    }
+
+    results$integrated <- integrated
   }
-  
-  integrated <- data.frame(Genotype = rownames(ge_matrix))
-  integrated$Mean <- round(rowMeans(ge_matrix), 2)
-  integrated$Mean_Rank <- rank(-integrated$Mean)
-  
-  env_index <- colMeans(ge_matrix) - grand_mean
-  s2di_temp <- numeric(g)
-  for (i in 1:g) {
-    y <- ge_matrix[i, ]
-    reg <- lm(y ~ env_index)
-    s2di_temp[i] <- sum((y - predict(reg))^2) / (e - 2)
-  }
-  integrated$ER_Rank <- rank(s2di_temp)
-  
-  sigma2_temp <- numeric(g)
-  for (i in 1:g) {
-    interaction <- ge_matrix[i, ] - rowMeans(ge_matrix)[i] - colMeans(ge_matrix) + grand_mean
-    sigma2_temp[i] <- sum(interaction^2) / (e - 1)
-  }
-  integrated$Shukla_Rank <- rank(sigma2_temp)
-  
-  cv_temp <- apply(ge_matrix, 1, sd) / rowMeans(ge_matrix) * 100
-  integrated$CV_Rank <- rank(cv_temp)
-  
-  integrated$Overall_Rank <- rowMeans(integrated[, c("Mean_Rank", "ER_Rank", "Shukla_Rank", "CV_Rank")])
-  integrated$Final_Rank <- rank(integrated$Overall_Rank)
-  integrated <- integrated[order(integrated$Final_Rank), ]
-  if (verbose) {
-    print(integrated, row.names = FALSE)
-  }
-  
-  results$integrated <- integrated
+
   results$ge_matrix <- ge_matrix
-  
+
   class(results) <- c("aridagri_stability", "list")
   return(invisible(results))
 }
