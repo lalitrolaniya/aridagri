@@ -26,10 +26,10 @@
 ## Installation
 
 ```r
-# Install devtools if needed
-install.packages("devtools")
+# Install from CRAN (recommended)
+install.packages("aridagri")
 
-# Install aridagri from GitHub
+# Or install development version from GitHub
 devtools::install_github("lalitrolaniya/aridagri")
 ```
 
