@@ -45,8 +45,8 @@ test_that("anova_crd with posthoc bonferroni works", {
 
 test_that("anova_crd with posthoc dunnett works", {
   set.seed(7)
-  data <- data.frame(trt = rep(c("A","B","C"), each=5), yield = rnorm(15,100,10))
-  result <- anova_crd(data, response="yield", treatment="trt", posthoc="dunnett", verbose=FALSE)
+  data <- data.frame(treatment = rep(c("A","B","C"), each=5), yield = rnorm(15,100,10))
+  result <- anova_crd(data, response="yield", treatment="treatment", posthoc="dunnett", verbose=FALSE)
   expect_type(result, "list")
 })
 
