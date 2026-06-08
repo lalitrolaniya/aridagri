@@ -97,6 +97,14 @@ All available via `perform_posthoc()`:
 | `nutrient_response()` | Response curve analysis |
 | `economic_analysis()` | Economic optimum |
 
+### Utility & Support Functions (4 Functions)
+
+| Function | Purpose |
+|----------|---------|
+| `perform_posthoc()` | Post-hoc comparison tests (7 methods) |
+| `check_assumptions()` | ANOVA assumption testing (normality, homogeneity) |
+| `arid_plot()` | Publication-quality visualization |
+| `export_results()` | Export results to Excel format |
 ---
 
 ## Quick Examples
