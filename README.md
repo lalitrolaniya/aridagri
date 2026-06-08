@@ -69,11 +69,16 @@ All available via `perform_posthoc()`:
 - Bonferroni Correction
 - Dunnett's Test (vs Control)
 
-### Agronomic Analysis (6 Functions)
+### Stability Analysis (1 Function)
 
 | Function | Analysis |
 |----------|----------|
-| `stability_analysis()` | 7-method stability analysis |
+| `stability_analysis()` | 7 methods: Eberhart-Russell, AMMI, Finlay-Wilkinson, Shukla, Wricke, CV, Lin-Binns with integrated ranking |
+
+### Agronomic Analysis (5 Functions)
+
+| Function | Analysis |
+|----------|----------|
 | `thermal_indices()` | GDD, HTU, PTU, HUE |
 | `crop_growth_analysis()` | CGR, RGR, NAR, LAI |
 | `harvest_index()` | HI and partitioning |
