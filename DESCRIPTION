@@ -52,6 +52,7 @@ Suggests: ggplot2, dplyr, tidyr, emmeans, multcomp, corrplot,
         writexl, rmarkdown, testthat (>= 3.0.0)
 URL: https://github.com/lalitrolaniya/aridagri
 BugReports: https://github.com/lalitrolaniya/aridagri/issues
+Config/testthat/edition: 3
 NeedsCompilation: no
 Packaged: 2026-02-19 16:14:41 UTC; lalitrolaniya
 Author: Lalit Kumar Rolaniya [aut, cre] (ORCID:
