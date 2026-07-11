@@ -231,7 +231,7 @@ export_results(res, "results.csv", format = "csv")   # CSV
 ```
 Rolaniya, L.K., Jat, R.L., Punia, M., and Choudhary, R.R. (2026). aridagri:
 Comprehensive Statistical Tools for Agricultural Research.
-R package version 2.0.3. https://github.com/lalitrolaniya/aridagri
+R package version 2.0.4. https://github.com/lalitrolaniya/aridagri
 ```
 
 ---
