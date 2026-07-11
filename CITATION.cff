@@ -2,8 +2,8 @@ cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
 type: software
 title: "aridagri: Comprehensive Statistical Tools for Agricultural Research"
-version: 2.0.3
-date-released: 2026-02-24
+version: 2.0.4
+date-released: 2026-07-10
 doi: 10.32614/CRAN.package.aridagri
 url: https://cran.r-project.org/package=aridagri
 repository-code: https://github.com/lalitrolaniya/aridagri
