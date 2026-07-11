@@ -14,7 +14,12 @@ arid_plot(x, type = "bar", ...)
 \item{...}{Additional arguments passed to plotting functions}
 }
 \value{
-A ggplot2 object
+No return value; called for its side effect of drawing a plot on the
+current graphics device. The plot produced depends on the class of \code{x}:
+a correlation heatmap for \code{aridagri_correlation} objects, a bar chart of
+treatment means for \code{aridagri_anova} objects, and a bar chart of the
+integrated stability ranking for \code{aridagri_stability} objects. Uses only
+base graphics, so no additional packages are required.
 }
 \description{
 Generate publication-quality plots for aridagri analyses.

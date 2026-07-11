@@ -5,6 +5,41 @@
 #' ICAR-Indian Institute of Pulses Research, Regional Centre, Bikaner
 #' ============================================================================
 
+# Internal: assemble a correct split-plot ANOVA table from an aov() model that
+# was fitted with Error() strata. Each effect keeps the F-test computed against
+# its own stratum residual (so main-plot factors are tested against the pooled
+# main-plot error, not the sub-plot residual). Residual rows are relabelled, in
+# stratum order, as Replication, Error(a), Error(b), Error(c), ... The named
+# list of error mean squares and df is attached as attribute "error_terms".
+# Not exported.
+.spd_error_table <- function(fit) {
+  s <- summary(fit)
+  rows <- list()
+  err  <- list()
+  for (k in seq_along(s)) {
+    tab <- s[[k]][[1]]
+    rn  <- rownames(tab)
+    res_label <- if (k == 1L) "Replication" else paste0("Error(", letters[k - 1L], ")")
+    cn  <- colnames(tab)
+    for (i in seq_len(nrow(tab))) {
+      lab <- trimws(rn[i])
+      if (lab == "Residuals") lab <- res_label
+      rows[[length(rows) + 1L]] <- data.frame(
+        Df        = tab[i, "Df"],
+        `Sum Sq`  = tab[i, "Sum Sq"],
+        `Mean Sq` = tab[i, "Mean Sq"],
+        `F value` = if ("F value" %in% cn) tab[i, "F value"] else NA_real_,
+        `Pr(>F)`  = if ("Pr(>F)"  %in% cn) tab[i, "Pr(>F)"]  else NA_real_,
+        row.names = lab, check.names = FALSE, stringsAsFactors = FALSE)
+    }
+    ri <- which(trimws(rn) == "Residuals")
+    if (length(ri)) err[[res_label]] <- list(ms = tab[ri, "Mean Sq"], df = tab[ri, "Df"])
+  }
+  out <- do.call(rbind, rows)
+  attr(out, "error_terms") <- err
+  out
+}
+
 #' Split Plot Design ANOVA (Standard)
 #'
 #' @description
@@ -65,15 +100,21 @@ anova_spd <- function(data, response, main_plot, sub_plot, replication,
   
   model <- aov(formula_spd, data = data)
   anova_full <- anova(model)
-  
-  # Extract sums of squares
-  SS_rep <- anova_full$`Sum Sq`[1]
-  SS_main <- anova_full$`Sum Sq`[2]
-  SS_error_a <- anova_full$`Sum Sq`[3]
-  SS_sub <- anova_full$`Sum Sq`[4]
-  SS_interaction <- anova_full$`Sum Sq`[5]
-  SS_error_b <- anova_full$`Sum Sq`[6]
-  SS_total <- sum(anova_full$`Sum Sq`)
+
+  # Extract sums of squares BY TERM NAME. R sorts main-effect terms before
+  # interaction terms in the ANOVA table regardless of formula order, so fixed
+  # positions [3]/[4] would swap Error(a) (rep:main) with the Sub-plot effect.
+  rn  <- rownames(anova_full)
+  SSq <- anova_full$`Sum Sq`
+  SS_rep         <- SSq[which(rn == replication)]
+  SS_main        <- SSq[which(rn == main_plot)]
+  SS_error_a     <- SSq[which(rn %in% c(paste0(replication, ":", main_plot),
+                                        paste0(main_plot, ":", replication)))]
+  SS_sub         <- SSq[which(rn == sub_plot)]
+  SS_interaction <- SSq[which(rn %in% c(paste0(main_plot, ":", sub_plot),
+                                        paste0(sub_plot, ":", main_plot)))]
+  SS_error_b     <- SSq[length(SSq)]        # Residuals is always the last row
+  SS_total <- sum(SSq)
   
   # Degrees of freedom
   df_rep <- r - 1
@@ -323,166 +364,21 @@ anova_spd <- function(data, response, main_plot, sub_plot, replication,
 anova_spd_ab_main <- function(data, response, main_factor1, main_factor2, 
                                sub_plot, replication, posthoc = "lsd", alpha = 0.05,
                             verbose = TRUE) {
-  
-  # Convert to factors
-  data[[main_factor1]] <- as.factor(data[[main_factor1]])
-  data[[main_factor2]] <- as.factor(data[[main_factor2]])
-  data[[sub_plot]] <- as.factor(data[[sub_plot]])
-  data[[replication]] <- as.factor(data[[replication]])
-  
-  # Get dimensions
-  a <- nlevels(data[[main_factor1]])
-  b <- nlevels(data[[main_factor2]])
-  c <- nlevels(data[[sub_plot]])
-  r <- nlevels(data[[replication]])
-  N <- nrow(data)
-  
-  # Check for balanced design
-  if (N != a * b * c * r) {
-    warning("Unbalanced design detected: expected ", a * b * c * r, " observations but found ", N, ". ",
-            "Results assume balanced data and may be unreliable.", call. = FALSE)
-  }
-  
-  # Create main plot combination
-  data$main_plot <- interaction(data[[main_factor1]], data[[main_factor2]])
-  m <- nlevels(data$main_plot)  # Number of main plot treatments (a  b)
-  
-  # Fit model
-  formula_spd <- as.formula(paste(response, "~", replication, "+",
-                                   main_factor1, "*", main_factor2, "+",
-                                   replication, ":", main_factor1, ":", main_factor2, "+",
-                                   sub_plot, "+",
-                                   main_factor1, ":", sub_plot, "+",
-                                   main_factor2, ":", sub_plot, "+",
-                                   main_factor1, ":", main_factor2, ":", sub_plot))
-  
-  model <- aov(formula_spd, data = data)
-  anova_full <- anova(model)
-  
-  # Print header
-  if (verbose) {
-    cat("\n")
-    cat("\n")
-    cat("          SPLIT PLOT DESIGN WITH (AB) IN MAIN PLOT - ANOVA                   \n")
-    cat("\n")
-    cat(" Response Variable    :", sprintf("%-53s", response), "\n")
-    cat(" Main Plot Factor A   :", sprintf("%-53s", main_factor1), "\n")
-    cat(" Main Plot Factor B   :", sprintf("%-53s", main_factor2), "\n")
-    cat(" Sub-Plot Factor C    :", sprintf("%-53s", sub_plot), "\n")
-    cat(" Replications         :", sprintf("%-53d", r), "\n")
-    cat(" Levels of A          :", sprintf("%-53d", a), "\n")
-    cat(" Levels of B          :", sprintf("%-53d", b), "\n")
-    cat(" Levels of C          :", sprintf("%-53d", c), "\n")
-    cat(" Total Observations   :", sprintf("%-53d", N), "\n")
-    cat("\n")
-  }
-  
-  # Calculate degrees of freedom
-  df_rep <- r - 1
-  df_a <- a - 1
-  df_b <- b - 1
-  df_ab <- (a - 1) * (b - 1)
-  df_error_a <- (r - 1) * (a * b - 1)
-  df_c <- c - 1
-  df_ac <- (a - 1) * (c - 1)
-  df_bc <- (b - 1) * (c - 1)
-  df_abc <- (a - 1) * (b - 1) * (c - 1)
-  df_error_b <- a * b * (r - 1) * (c - 1)
-  df_total <- N - 1
-  
-  if (verbose) {
-    cat("\n\n")
-    cat("                           ANALYSIS OF VARIANCE                               \n")
-    cat("\n")
-    cat(" Source                   df        SS           MS         F     Pr>F   \n")
-    cat("\n")
-  }
-  
-  # Print ANOVA rows
-  for (i in 1:nrow(anova_full)) {
-    source_name <- rownames(anova_full)[i]
-    # Truncate long names
-    if (nchar(source_name) > 21) {
-      source_name <- paste0(substr(source_name, 1, 18), "...")
-    }
-    
-    if (!is.na(anova_full$`F value`[i])) {
-      if (verbose) {
-        cat(sprintf(" %-21s  %6d  %11.2f  %11.2f  %5.2f  %7.4f \n",
-                    source_name, anova_full$Df[i], anova_full$`Sum Sq`[i], 
-                    anova_full$`Mean Sq`[i], anova_full$`F value`[i], 
-                    anova_full$`Pr(>F)`[i]))
-      }
-    } else {
-      if (verbose) {
-        cat(sprintf(" %-21s  %6d  %11.2f  %11.2f                 \n",
-                    source_name, anova_full$Df[i], anova_full$`Sum Sq`[i], 
-                    anova_full$`Mean Sq`[i]))
-      }
-    }
-  }
-  if (verbose) {
-    cat("\n")
-  }
-  
-  # Calculate statistics
-  grand_mean <- mean(data[[response]], na.rm = TRUE)
-  
-  # Extract error mean squares (simplified - need to identify correct rows)
-  n_rows <- nrow(anova_full)
-  MS_error_b <- anova_full$`Mean Sq`[n_rows]
-  df_error_b_actual <- anova_full$Df[n_rows]
-  
-  cv_b <- sqrt(MS_error_b) / grand_mean * 100
-  
-  if (verbose) {
-    cat("\n\n")
-    cat("                           SUMMARY STATISTICS                                 \n")
-    cat("\n")
-    cat(sprintf(" Grand Mean                    : %10.2f                                   \n", grand_mean))
-    cat(sprintf(" CV (b)                        : %10.2f%%                                  \n", cv_b))
-    cat("\n")
-  }
-  
-  # Factor means
-  if (verbose) {
-    cat("\n\n")
-    cat("                              FACTOR MEANS                                    \n")
-    cat("\n")
-  }
-  
-  # Means for each factor
-  mean_a <- aggregate(data[[response]], by = list(data[[main_factor1]]), FUN = mean)
-  names(mean_a) <- c("Level", "Mean")
-  if (verbose) {
-    cat(sprintf("\nFactor A (%s):\n", main_factor1))
-    print(mean_a, row.names = FALSE)
-  }
-  
-  mean_b <- aggregate(data[[response]], by = list(data[[main_factor2]]), FUN = mean)
-  names(mean_b) <- c("Level", "Mean")
-  if (verbose) {
-    cat(sprintf("\nFactor B (%s):\n", main_factor2))
-    print(mean_b, row.names = FALSE)
-  }
-  
-  mean_c <- aggregate(data[[response]], by = list(data[[sub_plot]]), FUN = mean)
-  names(mean_c) <- c("Level", "Mean")
-  if (verbose) {
-    cat(sprintf("\nFactor C (%s):\n", sub_plot))
-    print(mean_c, row.names = FALSE)
-  }
-  
-  # Return results
+  groups <- list(main = c(main_factor1, main_factor2), sub = sub_plot)
+  core <- .aridagri_spd_anova(data, response, replication, groups, alpha)
+  if (verbose)
+    .aridagri_print_spd(core, "Split-Plot Design: A x B factorial in main plots")
   result <- list(
-    design = "Split Plot Design (AB Main Plot)",
-    anova_table = anova_full,
-    model = model,
-    grand_mean = grand_mean,
-    cv = cv_b,
-    factor_means = list(A = mean_a, B = mean_b, C = mean_c)
+    design       = "Split-Plot (A x B main, sub)",
+    anova_table  = core$anova_table,
+    grand_mean   = core$grand_mean,
+    cv           = core$cv,
+    ms_error_a   = core$error_ms[["main"]], df_error_a = core$error_df[["main"]],
+    ms_error_b   = core$error_ms[["sub"]],  df_error_b = core$error_df[["sub"]],
+    factor_means = core$factor_means,
+    comparisons  = core$comparisons,
+    model        = core$model
   )
-  
   class(result) <- c("aridagri_spd_ab", "list")
   return(invisible(result))
 }
@@ -526,106 +422,21 @@ anova_spd_c_main_ab_sub <- function(data, response, main_plot, sub_factor1,
                                      sub_factor2, replication, posthoc = "lsd", 
                                      alpha = 0.05,
                             verbose = TRUE) {
-  
-  # Convert to factors
-  data[[main_plot]] <- as.factor(data[[main_plot]])
-  data[[sub_factor1]] <- as.factor(data[[sub_factor1]])
-  data[[sub_factor2]] <- as.factor(data[[sub_factor2]])
-  data[[replication]] <- as.factor(data[[replication]])
-  
-  # Get dimensions
-  c_levels <- nlevels(data[[main_plot]])
-  a <- nlevels(data[[sub_factor1]])
-  b <- nlevels(data[[sub_factor2]])
-  r <- nlevels(data[[replication]])
-  N <- nrow(data)
-  
-  # Check for balanced design
-  if (N != c_levels * a * b * r) {
-    warning("Unbalanced design detected: expected ", c_levels * a * b * r, " observations but found ", N, ". ",
-            "Results assume balanced data and may be unreliable.", call. = FALSE)
-  }
-  
-  # Fit model
-  formula_spd <- as.formula(paste(response, "~", replication, "+",
-                                   main_plot, "+", replication, ":", main_plot, "+",
-                                   sub_factor1, "*", sub_factor2, "+",
-                                   main_plot, ":", sub_factor1, "+",
-                                   main_plot, ":", sub_factor2, "+",
-                                   main_plot, ":", sub_factor1, ":", sub_factor2))
-  
-  model <- aov(formula_spd, data = data)
-  anova_full <- anova(model)
-  
-  # Print header
-  if (verbose) {
-    cat("\n")
-    cat("\n")
-    cat("        SPLIT PLOT DESIGN: C IN MAIN PLOT, (AB) IN SUB-PLOT                  \n")
-    cat("\n")
-    cat(" Response Variable    :", sprintf("%-53s", response), "\n")
-    cat(" Main Plot Factor C   :", sprintf("%-53s", main_plot), "\n")
-    cat(" Sub-Plot Factor A    :", sprintf("%-53s", sub_factor1), "\n")
-    cat(" Sub-Plot Factor B    :", sprintf("%-53s", sub_factor2), "\n")
-    cat(" Replications         :", sprintf("%-53d", r), "\n")
-    cat(" Levels of C          :", sprintf("%-53d", c_levels), "\n")
-    cat(" Levels of A          :", sprintf("%-53d", a), "\n")
-    cat(" Levels of B          :", sprintf("%-53d", b), "\n")
-    cat(" Total Observations   :", sprintf("%-53d", N), "\n")
-    cat("\n")
-
-    cat("\n\n")
-    cat("                           ANALYSIS OF VARIANCE                               \n")
-    cat("\n")
-
-    print(anova_full)
-  }
-  
-  # Statistics
-  grand_mean <- mean(data[[response]], na.rm = TRUE)
-  n_rows <- nrow(anova_full)
-  MS_error_b <- anova_full$`Mean Sq`[n_rows]
-  cv_b <- sqrt(MS_error_b) / grand_mean * 100
-  
-  if (verbose) {
-    cat("\n\n")
-    cat("                           SUMMARY STATISTICS                                 \n")
-    cat("\n")
-    cat(sprintf(" Grand Mean                    : %10.2f                                   \n", grand_mean))
-    cat(sprintf(" CV (b)                        : %10.2f%%                                  \n", cv_b))
-    cat("\n")
-  }
-  
-  # Factor means
-  mean_c <- aggregate(data[[response]], by = list(data[[main_plot]]), FUN = mean)
-  names(mean_c) <- c("Level", "Mean")
-  
-  mean_a <- aggregate(data[[response]], by = list(data[[sub_factor1]]), FUN = mean)
-  names(mean_a) <- c("Level", "Mean")
-  
-  mean_b <- aggregate(data[[response]], by = list(data[[sub_factor2]]), FUN = mean)
-  names(mean_b) <- c("Level", "Mean")
-  
-  if (verbose) {
-    cat("\n--- Factor Means ---\n")
-    cat(sprintf("\nMain Plot C (%s):\n", main_plot))
-    print(mean_c, row.names = FALSE)
-    cat(sprintf("\nSub-Plot A (%s):\n", sub_factor1))
-    print(mean_a, row.names = FALSE)
-    cat(sprintf("\nSub-Plot B (%s):\n", sub_factor2))
-    print(mean_b, row.names = FALSE)
-  }
-  
-  # Return
+  groups <- list(main = main_plot, sub = c(sub_factor1, sub_factor2))
+  core <- .aridagri_spd_anova(data, response, replication, groups, alpha)
+  if (verbose)
+    .aridagri_print_spd(core, "Split-Plot Design: C in main plots, A x B factorial in sub plots")
   result <- list(
-    design = "Split Plot Design (C Main, AB Sub)",
-    anova_table = anova_full,
-    model = model,
-    grand_mean = grand_mean,
-    cv = cv_b,
-    factor_means = list(C = mean_c, A = mean_a, B = mean_b)
+    design       = "Split-Plot (C main, A x B sub)",
+    anova_table  = core$anova_table,
+    grand_mean   = core$grand_mean,
+    cv           = core$cv,
+    ms_error_a   = core$error_ms[["main"]], df_error_a = core$error_df[["main"]],
+    ms_error_b   = core$error_ms[["sub"]],  df_error_b = core$error_df[["sub"]],
+    factor_means = core$factor_means,
+    comparisons  = core$comparisons,
+    model        = core$model
   )
-  
   class(result) <- c("aridagri_spd_cab", "list")
   return(invisible(result))
 }
@@ -671,97 +482,22 @@ anova_spd_c_main_ab_sub <- function(data, response, main_plot, sub_factor1,
 anova_spd_ab_cd <- function(data, response, main_factor1, main_factor2,
                              sub_factor1, sub_factor2, replication,
                             verbose = TRUE) {
-  
-  # Convert to factors
-  data[[main_factor1]] <- as.factor(data[[main_factor1]])
-  data[[main_factor2]] <- as.factor(data[[main_factor2]])
-  data[[sub_factor1]] <- as.factor(data[[sub_factor1]])
-  data[[sub_factor2]] <- as.factor(data[[sub_factor2]])
-  data[[replication]] <- as.factor(data[[replication]])
-  
-  # Get dimensions
-  a <- nlevels(data[[main_factor1]])
-  b <- nlevels(data[[main_factor2]])
-  c <- nlevels(data[[sub_factor1]])
-  d <- nlevels(data[[sub_factor2]])
-  r <- nlevels(data[[replication]])
-  N <- nrow(data)
-  
-  # Check for balanced design
-  if (N != a * b * c * d * r) {
-    warning("Unbalanced design detected: expected ", a * b * c * d * r, " observations but found ", N, ". ",
-            "Results assume balanced data and may be unreliable.", call. = FALSE)
-  }
-  
-  # Create combination factors
-  data$main_comb <- interaction(data[[main_factor1]], data[[main_factor2]])
-  
-  # Fit model - comprehensive
-  formula_spd <- as.formula(paste(response, "~", replication, "+",
-                                   main_factor1, "*", main_factor2, "+",
-                                   "Error(", replication, ":", main_factor1, ":", main_factor2, ") +",
-                                   sub_factor1, "*", sub_factor2, "+",
-                                   main_factor1, ":", sub_factor1, "+",
-                                   main_factor1, ":", sub_factor2, "+",
-                                   main_factor2, ":", sub_factor1, "+",
-                                   main_factor2, ":", sub_factor2, "+",
-                                   main_factor1, ":", main_factor2, ":", sub_factor1, "+",
-                                   main_factor1, ":", main_factor2, ":", sub_factor2, "+",
-                                   main_factor1, ":", sub_factor1, ":", sub_factor2, "+",
-                                   main_factor2, ":", sub_factor1, ":", sub_factor2, "+",
-                                   main_factor1, ":", main_factor2, ":", sub_factor1, ":", sub_factor2))
-  
-  # Simpler model for estimation
-  formula_simple <- as.formula(paste(response, "~", replication, "+",
-                                      main_factor1, "*", main_factor2, "+",
-                                      replication, ":", main_factor1, ":", main_factor2, "+",
-                                      sub_factor1, "*", sub_factor2, "*",
-                                      main_factor1, "*", main_factor2))
-  
-  model <- aov(formula_simple, data = data)
-  anova_full <- anova(model)
-  
-  # Print header
-  if (verbose) {
-    cat("\n")
-    cat("\n")
-    cat("      SPLIT PLOT DESIGN: (AB) MAIN PLOT, (CD) SUB-PLOT                      \n")
-    cat("\n")
-    cat(" Response Variable    :", sprintf("%-53s", response), "\n")
-    cat(" Main Plot Factor A   :", sprintf("%-53s", main_factor1), "\n")
-    cat(" Main Plot Factor B   :", sprintf("%-53s", main_factor2), "\n")
-    cat(" Sub-Plot Factor C    :", sprintf("%-53s", sub_factor1), "\n")
-    cat(" Sub-Plot Factor D    :", sprintf("%-53s", sub_factor2), "\n")
-    cat(" Replications         :", sprintf("%-53d", r), "\n")
-    cat(" Levels: A=%d, B=%d, C=%d, D=%d", a, b, c, d)
-    cat(sprintf("%44s\n", ""))
-    cat(" Total Observations   :", sprintf("%-53d", N), "\n")
-    cat("\n")
-
-    cat("\n\n")
-    cat("                           ANALYSIS OF VARIANCE                               \n")
-    cat("\n")
-
-    print(anova_full)
-  }
-  
-  # Statistics
-  grand_mean <- mean(data[[response]], na.rm = TRUE)
-  
-  if (verbose) {
-    cat("\n\n")
-    cat(sprintf(" Grand Mean: %.2f                                                           \n", grand_mean))
-    cat("\n")
-  }
-  
-  # Return
+  groups <- list(main = c(main_factor1, main_factor2),
+                 sub  = c(sub_factor1, sub_factor2))
+  core <- .aridagri_spd_anova(data, response, replication, groups, 0.05)
+  if (verbose)
+    .aridagri_print_spd(core, "Split-Plot Design: A x B factorial main, C x D factorial sub")
   result <- list(
-    design = "Split Plot Design (AB Main, CD Sub)",
-    anova_table = anova_full,
-    model = model,
-    grand_mean = grand_mean
+    design       = "Split-Plot (A x B main, C x D sub)",
+    anova_table  = core$anova_table,
+    grand_mean   = core$grand_mean,
+    cv           = core$cv,
+    ms_error_a   = core$error_ms[["main"]], df_error_a = core$error_df[["main"]],
+    ms_error_b   = core$error_ms[["sub"]],  df_error_b = core$error_df[["sub"]],
+    factor_means = core$factor_means,
+    comparisons  = core$comparisons,
+    model        = core$model
   )
-  
   class(result) <- c("aridagri_spd_abcd", "list")
   return(invisible(result))
 }
@@ -801,115 +537,49 @@ anova_spd_ab_cd <- function(data, response, main_factor1, main_factor2,
 anova_spd_pooled <- function(data, response, main_plot, sub_plot, 
                               environment, replication,
                             verbose = TRUE) {
-  
-  # Convert to factors
-  data[[main_plot]] <- as.factor(data[[main_plot]])
-  data[[sub_plot]] <- as.factor(data[[sub_plot]])
+
+  data[[main_plot]]   <- as.factor(data[[main_plot]])
+  data[[sub_plot]]    <- as.factor(data[[sub_plot]])
   data[[environment]] <- as.factor(data[[environment]])
   data[[replication]] <- as.factor(data[[replication]])
-  
-  # Get dimensions
-  a <- nlevels(data[[main_plot]])
-  b <- nlevels(data[[sub_plot]])
-  e <- nlevels(data[[environment]])
-  r <- nlevels(data[[replication]])
+
+  a <- nlevels(data[[main_plot]]); b <- nlevels(data[[sub_plot]])
+  e <- nlevels(data[[environment]]); r <- nlevels(data[[replication]])
   N <- nrow(data)
-  
-  # Check for balanced design
   if (N != a * b * e * r) {
-    warning("Unbalanced design detected: expected ", a * b * e * r, " observations but found ", N, ". ",
+    warning("Unbalanced design detected: expected ", a * b * e * r,
+            " observations but found ", N, ". ",
             "Results assume balanced data and may be unreliable.", call. = FALSE)
   }
-  
-  # Individual environment analyses
-  env_levels <- levels(data[[environment]])
-  mse_a_values <- numeric(e)
-  mse_b_values <- numeric(e)
-  
-  if (verbose) {
-    cat("\n")
-    cat("\n")
-    cat("            POOLED SPLIT PLOT DESIGN ANALYSIS                                 \n")
-    cat("\n")
-    cat(" Response Variable   :", sprintf("%-54s", response), "\n")
-    cat(" Main Plot Factor    :", sprintf("%-54s", main_plot), "\n")
-    cat(" Sub-Plot Factor     :", sprintf("%-54s", sub_plot), "\n")
-    cat(" Environment Factor  :", sprintf("%-54s", environment), "\n")
-    cat(" Main Plot Levels    :", sprintf("%-54d", a), "\n")
-    cat(" Sub-Plot Levels     :", sprintf("%-54d", b), "\n")
-    cat(" Environments        :", sprintf("%-54d", e), "\n")
-    cat(" Replications/Env    :", sprintf("%-54d", r), "\n")
-    cat(" Total Observations  :", sprintf("%-54d", N), "\n")
-    cat("\n")
-  }
-  
-  # Fit pooled model
-  formula_pooled <- as.formula(paste(response, "~", environment, "+",
-                                      environment, ":", replication, "+",
-                                      main_plot, "+", environment, ":", main_plot, "+",
-                                      environment, ":", replication, ":", main_plot, "+",
-                                      sub_plot, "+", main_plot, ":", sub_plot, "+",
-                                      environment, ":", sub_plot, "+",
-                                      environment, ":", main_plot, ":", sub_plot))
-  
-  model <- aov(formula_pooled, data = data)
-  anova_pooled <- anova(model)
-  
-  if (verbose) {
-    cat("\n\n")
-    cat("                        POOLED ANALYSIS OF VARIANCE                           \n")
-    cat("\n")
 
-    print(anova_pooled)
-  }
-  
-  # Grand mean and CV
-  grand_mean <- mean(data[[response]], na.rm = TRUE)
-  n_rows <- nrow(anova_pooled)
-  MS_error <- anova_pooled$`Mean Sq`[n_rows]
-  cv <- sqrt(MS_error) / grand_mean * 100
-  
-  if (verbose) {
-    cat("\n\n")
-    cat("                           SUMMARY STATISTICS                                 \n")
-    cat("\n")
-    cat(sprintf(" Grand Mean                    : %10.2f                                   \n", grand_mean))
-    cat(sprintf(" Pooled CV                     : %10.2f%%                                  \n", cv))
-    cat("\n")
-  }
-  
-  # Means tables
+  core <- .aridagri_spd_pooled_anova(data, response, environment, replication,
+                                     split_factors = c(main_plot, sub_plot))
+
   main_means <- aggregate(data[[response]], by = list(data[[main_plot]]), FUN = mean)
   names(main_means) <- c("Level", "Mean")
-  
   sub_means <- aggregate(data[[response]], by = list(data[[sub_plot]]), FUN = mean)
   names(sub_means) <- c("Level", "Mean")
-  
   env_means <- aggregate(data[[response]], by = list(data[[environment]]), FUN = mean)
   names(env_means) <- c("Level", "Mean")
-  
+
   if (verbose) {
+    .aridagri_print_spd_pooled(core, "POOLED SPLIT PLOT DESIGN ANALYSIS")
     cat("\n--- Factor Means ---\n")
-    cat("\nMain Plot Means:\n")
-    print(main_means, row.names = FALSE)
-    cat("\nSub-Plot Means:\n")
-    print(sub_means, row.names = FALSE)
-    cat("\nEnvironment Means:\n")
-    print(env_means, row.names = FALSE)
+    cat("\nMain Plot Means:\n"); print(main_means, row.names = FALSE)
+    cat("\nSub-Plot Means:\n");  print(sub_means,  row.names = FALSE)
+    cat("\nEnvironment Means:\n"); print(env_means, row.names = FALSE)
   }
-  
-  # Return
+
   result <- list(
-    design = "Pooled Split Plot Design",
-    anova_table = anova_pooled,
-    model = model,
-    grand_mean = grand_mean,
-    cv = cv,
-    main_means = main_means,
-    sub_means = sub_means,
-    env_means = env_means
+    design      = "Pooled Split Plot Design",
+    anova_table = core$anova_table,
+    model       = core$model,
+    grand_mean  = core$grand_mean,
+    cv          = core$cv,
+    main_means  = main_means,
+    sub_means   = sub_means,
+    env_means   = env_means
   )
-  
   class(result) <- c("aridagri_spd_pooled", "list")
   return(invisible(result))
 }

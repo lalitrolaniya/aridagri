@@ -1,8 +1,8 @@
-# aridagri <img src="logo.png" align="right" height="139" />
+# aridagri <img src="man/figures/logo.png" align="right" height="139" />
 
 <!-- badges: start -->
 [![R-CMD-check](https://img.shields.io/badge/R--CMD--check-passing-brightgreen.svg)](https://cran.r-project.org/)
-[![License: GPL-3](https://img.shields.io/badge/License-GPL3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+![License: GPL-3](https://img.shields.io/badge/License-GPL3-blue.svg)
 [![CRAN](https://www.r-pkg.org/badges/version/aridagri)](https://cran.r-project.org/package=aridagri)
 [![DOI](https://img.shields.io/badge/DOI-10.32614/CRAN.package.aridagri-blue)](https://doi.org/10.32614/CRAN.package.aridagri)
 [![Downloads](https://cranlogs.r-pkg.org/badges/grand-total/aridagri)](https://cran.r-project.org/package=aridagri)
@@ -10,167 +10,227 @@
 
 ## Comprehensive Statistical Tools for Agricultural Research
 
-**aridagri** is a comprehensive R package providing **33 functions** for statistical analysis in agricultural research, with special focus on experimental design analysis and agronomic calculations.
+**aridagri** is an R package providing **33 functions** for statistical analysis
+in agricultural research, with a focus on experimental design analysis and
+agronomic calculations. It is written in base R with no hard dependencies.
 
 ### Key Features
 
-- 🔬 **Complete ANOVA Suite**: All experimental designs with proper error terms
-- 📊 **Multiple Post-Hoc Tests**: LSD, Duncan, Tukey, SNK, Scheffé, Bonferroni, Dunnett
-- 📈 **Stability Analysis**: 7 methods (Eberhart-Russell, AMMI, Finlay-Wilkinson, Shukla, Wricke, CV, Superiority)
-- 🌡️ **Thermal Indices**: GDD, HTU, PTU, Heat Use Efficiency
-- 🌱 **Crop Growth Analysis**: CGR, RGR, NAR, LAI
-- 📋 **Publication-Ready Output**: Formatted tables with SE, CD, CV
+- **ANOVA suite** covering all common field designs
+- **Post-hoc tests**: LSD, Duncan (DMRT), Tukey, SNK, Scheffe, Bonferroni, Dunnett
+- **Stability analysis**: 7 methods (Eberhart-Russell, AMMI, Finlay-Wilkinson, Shukla, Wricke, CV, Lin-Binns) with an integrated ranking
+- **Thermal indices**: GDD, HTU, PTU, Heat Use Efficiency
+- **Crop growth analysis**: CGR, RGR, NAR
+- **Publication-ready output**: formatted tables with SE, CD, CV
 
 ---
 
 ## Installation
 
 ```r
-# Install from CRAN (recommended)
+# From CRAN
 install.packages("aridagri")
 
-# Or install development version from GitHub
-devtools::install_github("lalitrolaniya/aridagri")
+# Development version from GitHub
+# install.packages("remotes")
+remotes::install_github("lalitrolaniya/aridagri")
 ```
 
 ---
 
 ## Function Overview
 
-### Experimental Design ANOVA (16 Functions)
+### Experimental Design ANOVA (16 functions)
 
 | Function | Design |
 |----------|--------|
 | `anova_crd()` | Completely Randomized Design |
 | `anova_rbd()` | Randomized Block Design |
-| `anova_rbd_pooled()` | Pooled RBD (Multi-Environment) |
+| `anova_rbd_pooled()` | Pooled RBD (multi-environment) |
 | `anova_latin()` | Latin Square Design |
 | `anova_factorial()` | Two-Factor Factorial |
 | `anova_factorial_3way()` | Three-Factor Factorial |
-| `anova_spd()` | Split Plot Design |
-| `anova_spd_ab_main()` | SPD with (A×B) in Main Plot |
-| `anova_spd_c_main_ab_sub()` | SPD with C Main, (A×B) Sub |
-| `anova_spd_ab_cd()` | SPD with (A×B) Main, (C×D) Sub |
-| `anova_spd_pooled()` | Pooled Split Plot Design |
-| `anova_sspd()` | Split-Split Plot Design |
+| `anova_spd()` | Split-Plot Design |
+| `anova_spd_ab_main()` | SPD with (A x B) in main plot |
+| `anova_spd_c_main_ab_sub()` | SPD with C main, (A x B) sub |
+| `anova_spd_ab_cd()` | SPD with (A x B) main, (C x D) sub |
+| `anova_spd_pooled()` | Pooled Split-Plot Design |
+| `anova_sspd()` | Split-Split-Plot Design |
 | `anova_sspd_pooled()` | Pooled SSPD |
-| `anova_strip()` | Strip Plot Design |
+| `anova_strip()` | Strip-Plot Design |
 | `anova_augmented()` | Augmented Block Design |
 | `anova_alpha_lattice()` | Alpha Lattice Design |
 
-### Post-Hoc Tests (7 Methods)
-
-All available via `perform_posthoc()`:
-- Fisher's LSD
-- Duncan's Multiple Range Test (DMRT)
-- Tukey's HSD
-- Student-Newman-Keuls (SNK)
-- Scheffé's Test
-- Bonferroni Correction
-- Dunnett's Test (vs Control)
-
-### Stability Analysis (1 Function)
+### Stability, agronomic, statistical and nutrient functions
 
 | Function | Analysis |
 |----------|----------|
-| `stability_analysis()` | 7 methods: Eberhart-Russell, AMMI, Finlay-Wilkinson, Shukla, Wricke, CV, Lin-Binns with integrated ranking |
-
-### Agronomic Analysis (5 Functions)
-
-| Function | Analysis |
-|----------|----------|
+| `stability_analysis()` | 7 stability methods with integrated ranking |
 | `thermal_indices()` | GDD, HTU, PTU, HUE |
-| `crop_growth_analysis()` | CGR, RGR, NAR, LAI |
-| `harvest_index()` | HI and partitioning |
+| `crop_growth_analysis()` | CGR, RGR, NAR |
+| `harvest_index()` | Harvest index and partitioning |
 | `yield_gap_analysis()` | Yield gap calculations |
 | `economic_indices()` | B:C ratio, net returns |
-
-### Statistical Analysis (4 Functions)
-
-| Function | Analysis |
-|----------|----------|
 | `correlation_analysis()` | Correlation matrix with significance |
 | `pca_analysis()` | Principal Component Analysis |
-| `path_analysis()` | Path coefficients |
+| `path_analysis()` | Path coefficient analysis |
 | `sem_analysis()` | Structural Equation Modeling |
-
-### Nutrient Analysis (3 Functions)
-
-| Function | Analysis |
-|----------|----------|
 | `nue_calculate()` | Nutrient Use Efficiency indices |
-| `nutrient_response()` | Response curve analysis |
-| `economic_analysis()` | Economic optimum |
+| `nutrient_response()` | Response curve and economic optimum |
+| `economic_analysis()` | Gross/net return, B:C ratio |
 
-### Utility & Support Functions (4 Functions)
+### Post-hoc, diagnostics and utilities
 
 | Function | Purpose |
 |----------|---------|
-| `perform_posthoc()` | Post-hoc comparison tests (7 methods) |
-| `check_assumptions()` | ANOVA assumption testing (normality, homogeneity) |
-| `arid_plot()` | Publication-quality visualization |
-| `export_results()` | Export results to Excel format |
+| `perform_posthoc()` | Post-hoc comparisons (7 methods) |
+| `check_assumptions()` | Normality, homogeneity, independence, outliers |
+| `arid_plot()` | Base-graphics plots for ANOVA, correlation and stability objects |
+| `export_results()` | Export results to Excel or CSV |
+
 ---
 
-## Quick Examples
+## Usage
 
-### Split-Split Plot Design ANOVA
+Every function is called with the data frame first, then the column names as
+character strings. Set `verbose = FALSE` to suppress the printed report and
+just capture the returned object.
+
+### Analysis of variance
 
 ```r
 library(aridagri)
 
-data <- expand.grid(
-  rep = 1:3,
-  irrigation = c("I1", "I2", "I3"),
-  variety = c("V1", "V2"),
-  nitrogen = c("N0", "N40", "N80")
+## Completely Randomized Design
+crd <- data.frame(
+  treatment = factor(rep(c("T1", "T2", "T3", "T4"), each = 4)),
+  yield     = c(20, 22, 19, 21,  25, 27, 24, 26,
+                30, 32, 29, 31,  28, 30, 27, 29)
 )
-data$yield <- rnorm(nrow(data), 1200, 150)
 
-result <- anova_sspd(data, 
-                     response = "yield",
-                     main_plot = "irrigation",
-                     sub_plot = "variety",
-                     sub_sub_plot = "nitrogen",
-                     replication = "rep")
+res <- anova_crd(crd, response = "yield", treatment = "treatment")
+
+## the returned object holds the table, means and statistics
+res$anova_table
+res$treatment_means
+res$cv
+
+## Randomized Block Design
+anova_rbd(data, response = "yield", treatment = "variety", block = "block")
+
+## Two-factor factorial
+anova_factorial(data, response = "yield", factor1 = "nitrogen", factor2 = "variety")
+
+## Split-plot design
+anova_spd(data, response = "yield",
+          main_plot = "irrigation", sub_plot = "variety", replication = "rep")
 ```
 
-### Stability Analysis (7 Methods)
+### Post-hoc comparisons
+
+There are two equivalent ways to run a post-hoc test.
+
+```r
+## Option 1: inline, as part of the ANOVA call
+anova_crd(crd, "yield", "treatment", posthoc = "tukey")
+
+## Option 2: standalone, on a fitted aov() model
+model <- aov(yield ~ treatment, data = crd)
+perform_posthoc(model, crd, response = "yield", treatment = "treatment",
+                posthoc = "tukey")
+```
+
+Valid method names are `"lsd"`, `"duncan"`, `"tukey"`, `"snk"`, `"scheffe"`,
+`"dunnett"`, `"bonferroni"`, or `"all"`. Dunnett compares every level against
+the **first** factor level as the control; there is no separate `control`
+argument, so order the treatment factor with the control first if needed.
+
+### Assumption checks
+
+```r
+model <- aov(yield ~ treatment, data = crd)
+check_assumptions(model)   # Shapiro-Wilk, Bartlett, Durbin-Watson, outliers
+```
+
+### Split-Split-Plot Design
 
 ```r
 data <- expand.grid(
-  variety = paste0("V", 1:10),
+  rep        = 1:3,
+  irrigation = c("I1", "I2", "I3"),
+  variety    = c("V1", "V2"),
+  nitrogen   = c("N0", "N40", "N80")
+)
+data$yield <- rnorm(nrow(data), 1200, 150)
+
+anova_sspd(data,
+           response     = "yield",
+           main_plot    = "irrigation",
+           sub_plot     = "variety",
+           sub_sub_plot = "nitrogen",
+           replication  = "rep")
+```
+
+### Stability analysis (7 methods)
+
+```r
+data <- expand.grid(
+  variety  = paste0("V", 1:10),
   location = paste0("L", 1:5),
-  rep = 1:3
+  rep      = 1:3
 )
 data$yield <- rnorm(nrow(data), 1200, 200)
 
-stability_analysis(data, 
-                   genotype = "variety",
+stability_analysis(data,
+                   genotype    = "variety",
                    environment = "location",
                    replication = "rep",
-                   trait = "yield",
-                   method = "all")
+                   trait       = "yield",
+                   method      = "all")
+```
+
+### Correlation, PCA and visualization
+
+```r
+df <- data.frame(
+  yield   = rnorm(30, 1200, 150),
+  pods    = rnorm(30, 50, 6),
+  biomass = rnorm(30, 3500, 400)
+)
+
+cor_res <- correlation_analysis(df, method = "pearson")
+pca_res <- pca_analysis(df, scale = TRUE)
+
+## arid_plot() draws factor/treatment means for any ANOVA design,
+## a heatmap for a correlation object, and a ranking for a stability object
+arid_plot(res)
+arid_plot(cor_res)
+```
+
+### Exporting results
+
+```r
+export_results(res, "results.xlsx")                  # Excel (default)
+export_results(res, "results.csv", format = "csv")   # CSV
 ```
 
 ---
 
 ## Unique Features
 
-1. **First R package** with ALL split plot design variations
-2. **Complete SE/CD calculations** for every comparison type
-3. **7 stability analysis methods** in single function
-4. **Integrated thermal indices** (GDD, HTU, PTU, HUE)
-5. **Crop growth analysis** (CGR, RGR, NAR, LAI)
-6. **Publication-ready formatted output**
+1. All split-plot design variations in one package
+2. SE and CD reported for each comparison type
+3. Seven stability analysis methods in a single function
+4. Thermal indices (GDD, HTU, PTU, HUE) and crop growth analysis (CGR, RGR, NAR)
+5. Base-R implementation with no hard dependencies
 
 ---
 
 ## Citation
 
 ```
-Rolaniya, L.K., Jat, R.L., Punia, M., and Choudhary, R.R. (2026). aridagri: 
-Comprehensive Statistical Tools for Agricultural Research. 
+Rolaniya, L.K., Jat, R.L., Punia, M., and Choudhary, R.R. (2026). aridagri:
+Comprehensive Statistical Tools for Agricultural Research.
 R package version 2.0.3. https://github.com/lalitrolaniya/aridagri
 ```
 
@@ -199,12 +259,6 @@ ICAR-Indian Institute of Groundnut Research, Regional Research Station, Bikaner,
 
 ---
 
-## Acknowledgments
-
-The authors gratefully acknowledge **ICAR-Indian Institute of Pulses Research, Kanpur** for providing necessary support and infrastructure for the development of this package.
-
----
-
 ## License
 
 GPL-3
@@ -213,4 +267,4 @@ GPL-3
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit issues or pull requests.
+Contributions are welcome. Please submit issues or pull requests on GitHub.

@@ -11,7 +11,7 @@ export_results(x, file, format = "xlsx", digits = 3, verbose = TRUE)
 
 \item{file}{Output file path}
 
-\item{format}{Output format: "xlsx"}
+\item{format}{Output format: \code{"xlsx"} (default) or \code{"csv"}}
 
 \item{digits}{Number of decimal places}
 

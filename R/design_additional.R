@@ -464,73 +464,55 @@ anova_alpha_lattice <- function(data, response, genotype, replication, block,
 anova_sspd_pooled <- function(data, response, main_plot, sub_plot, sub_sub_plot,
                                environment, replication,
                             verbose = TRUE) {
-  
-  # Convert to factors
-  data[[main_plot]] <- as.factor(data[[main_plot]])
-  data[[sub_plot]] <- as.factor(data[[sub_plot]])
+
+  data[[main_plot]]    <- as.factor(data[[main_plot]])
+  data[[sub_plot]]     <- as.factor(data[[sub_plot]])
   data[[sub_sub_plot]] <- as.factor(data[[sub_sub_plot]])
-  data[[environment]] <- as.factor(data[[environment]])
-  data[[replication]] <- as.factor(data[[replication]])
-  
-  # Get dimensions
-  a <- nlevels(data[[main_plot]])
-  b <- nlevels(data[[sub_plot]])
-  c <- nlevels(data[[sub_sub_plot]])
-  e <- nlevels(data[[environment]])
-  r <- nlevels(data[[replication]])
+  data[[environment]]  <- as.factor(data[[environment]])
+  data[[replication]]  <- as.factor(data[[replication]])
+
+  a <- nlevels(data[[main_plot]]); b <- nlevels(data[[sub_plot]])
+  cc <- nlevels(data[[sub_sub_plot]])
+  e <- nlevels(data[[environment]]); r <- nlevels(data[[replication]])
   N <- nrow(data)
-  
-  # Check for balanced design
-  if (N != a * b * c * e * r) {
-    warning("Unbalanced design detected: expected ", a * b * c * e * r, " observations but found ", N, ". ",
+  if (N != a * b * cc * e * r) {
+    warning("Unbalanced design detected: expected ", a * b * cc * e * r,
+            " observations but found ", N, ". ",
             "Results assume balanced data and may be unreliable.", call. = FALSE)
   }
-  
-  if (verbose) {
-    cat("\n")
-    cat("\n")
-    cat("               POOLED SPLIT-SPLIT PLOT DESIGN ANALYSIS                              \n")
-    cat("\n")
-    cat(" Main Plot (A)         :", sprintf("%-59s", main_plot), "\n")
-    cat(" Sub-Plot (B)          :", sprintf("%-59s", sub_plot), "\n")
-    cat(" Sub-Sub-Plot (C)      :", sprintf("%-59s", sub_sub_plot), "\n")
-    cat(" Environment (E)       :", sprintf("%-59s", environment), "\n")
-    cat(sprintf(" Levels: A=%d, B=%d, C=%d, E=%d, R=%d", a, b, c, e, r))
-    cat(sprintf("%39s\n", ""))
-    cat(" Total Observations    :", sprintf("%-59d", N), "\n")
-    cat("\n")
-  }
-  
-  # Fit pooled model
-  formula_pooled <- as.formula(paste(response, "~", 
-                                      environment, "*", main_plot, "*", sub_plot, "*", sub_sub_plot, "+",
-                                      environment, ":", replication))
-  
-  model <- aov(formula_pooled, data = data)
-  anova_table <- anova(model)
-  
-  if (verbose) {
-    cat("\n\n")
-    cat("                        POOLED ANALYSIS OF VARIANCE                                 \n")
-    cat("\n")
 
-    print(anova_table)
-  }
-  
-  # Grand mean
-  grand_mean <- mean(data[[response]], na.rm = TRUE)
+  core <- .aridagri_spd_pooled_anova(data, response, environment, replication,
+                                     split_factors = c(main_plot, sub_plot, sub_sub_plot))
+
+  main_means <- aggregate(data[[response]], by = list(data[[main_plot]]), FUN = mean)
+  names(main_means) <- c("Level", "Mean")
+  sub_means <- aggregate(data[[response]], by = list(data[[sub_plot]]), FUN = mean)
+  names(sub_means) <- c("Level", "Mean")
+  subsub_means <- aggregate(data[[response]], by = list(data[[sub_sub_plot]]), FUN = mean)
+  names(subsub_means) <- c("Level", "Mean")
+  env_means <- aggregate(data[[response]], by = list(data[[environment]]), FUN = mean)
+  names(env_means) <- c("Level", "Mean")
+
   if (verbose) {
-    cat(sprintf("\nGrand Mean: %.2f\n", grand_mean))
+    .aridagri_print_spd_pooled(core, "POOLED SPLIT-SPLIT PLOT DESIGN ANALYSIS")
+    cat("\n--- Factor Means ---\n")
+    cat("\nMain Plot Means:\n");    print(main_means,   row.names = FALSE)
+    cat("\nSub-Plot Means:\n");     print(sub_means,    row.names = FALSE)
+    cat("\nSub-Sub-Plot Means:\n"); print(subsub_means, row.names = FALSE)
+    cat("\nEnvironment Means:\n");  print(env_means,    row.names = FALSE)
   }
-  
-  # Return
+
   result <- list(
-    design = "Pooled Split-Split Plot Design",
-    anova_table = anova_table,
-    model = model,
-    grand_mean = grand_mean
+    design       = "Pooled Split-Split Plot Design",
+    anova_table  = core$anova_table,
+    model        = core$model,
+    grand_mean   = core$grand_mean,
+    cv           = core$cv,
+    main_means   = main_means,
+    sub_means    = sub_means,
+    subsub_means = subsub_means,
+    env_means    = env_means
   )
-  
   class(result) <- c("aridagri_sspd_pooled", "list")
   return(invisible(result))
 }

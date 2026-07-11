@@ -154,10 +154,11 @@ anova_crd <- function(data, response, treatment, posthoc = "lsd", alpha = 0.05,
   
   # Post-hoc tests
   posthoc_results <- perform_posthoc(model, data, response, treatment, 
-                                      MS_error, df_error, posthoc, alpha)
+                                      MS_error, df_error, posthoc, alpha,
+                                      verbose = verbose)
   
   # Model diagnostics
-  diagnostics <- check_assumptions(model)
+  diagnostics <- check_assumptions(model, verbose = verbose)
   
   # Return results
   result <- list(
@@ -350,7 +351,8 @@ anova_rbd <- function(data, response, treatment, block, posthoc = "lsd", alpha =
   
   # Post-hoc tests
   posthoc_results <- perform_posthoc(model, data, response, treatment, 
-                                      MS_error, df_error, posthoc, alpha)
+                                      MS_error, df_error, posthoc, alpha,
+                                      verbose = verbose)
   
   # Return results
   result <- list(

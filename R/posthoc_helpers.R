@@ -40,10 +40,31 @@ get_sig_symbol <- function(p_value) {
 #'
 #' @return List containing post-hoc test results
 #' @export
-perform_posthoc <- function(model, data, response, treatment, mse, df_error, 
-                            posthoc = "lsd", alpha = 0.05,
+perform_posthoc <- function(model, data, response, treatment, mse = NULL,
+                            df_error = NULL, posthoc = "lsd", alpha = 0.05,
                             verbose = TRUE) {
-  
+
+  # Derive the error mean square and error degrees of freedom from the fitted
+  # model when they are not supplied. This lets perform_posthoc() be used
+  # standalone (e.g. Bonferroni, or LSD/Tukey when 'agricolae' is absent)
+  # without the caller having to compute them by hand.
+  if (is.null(mse) || is.null(df_error)) {
+    aov_tab <- tryCatch(anova(model), error = function(e) NULL)
+    if (!is.null(aov_tab) && "Mean Sq" %in% colnames(aov_tab)) {
+      resid_row <- nrow(aov_tab)
+      if (is.null(df_error)) df_error <- aov_tab[resid_row, "Df"]
+      if (is.null(mse))      mse      <- aov_tab[resid_row, "Mean Sq"]
+    } else {
+      df_e <- tryCatch(df.residual(model), error = function(e) NULL)
+      if (is.null(df_e)) {
+        stop("Could not derive 'mse' and 'df_error' from 'model'; ",
+             "please supply them explicitly.")
+      }
+      if (is.null(df_error)) df_error <- df_e
+      if (is.null(mse))      mse      <- sum(residuals(model)^2) / df_e
+    }
+  }
+
   # Get number of replications per treatment
   n_per_trt <- table(data[[treatment]])
   r <- mean(n_per_trt)  # Assumes balanced design
@@ -58,12 +79,12 @@ perform_posthoc <- function(model, data, response, treatment, mse, df_error,
   
   # LSD Test
   if (posthoc %in% c("lsd", "all")) {
-    if (verbose) {
-      cat("\n--- Fisher's Least Significant Difference (LSD) Test ---\n")
+    if (verbose) cat("\n--- Fisher's Least Significant Difference (LSD) Test ---\n")
 
-      if (requireNamespace("agricolae", quietly = TRUE)) {
-        lsd_result <- agricolae::LSD.test(model, treatment, alpha = alpha)
+    if (requireNamespace("agricolae", quietly = TRUE)) {
+      lsd_result <- agricolae::LSD.test(model, treatment, alpha = alpha)
 
+      if (verbose) {
         cat(sprintf("\nLSD value ( = %.2f): %.3f\n", alpha, lsd_result$statistics$LSD))
         cat("\nTreatment Groups:\n")
 
@@ -74,29 +95,31 @@ perform_posthoc <- function(model, data, response, treatment, mse, df_error,
 
         cat("\n")
         print(groups_df[, c("treatment", names(groups_df)[1], "groups")], row.names = FALSE)
+      }
 
-        results$lsd <- lsd_result
-      } else {
-        # Manual LSD calculation
-        t_value <- qt(1 - alpha/2, df_error)
-        lsd_value <- t_value * sqrt(2 * mse / r)
+      results$lsd <- lsd_result
+    } else {
+      # Manual LSD calculation
+      t_value <- qt(1 - alpha/2, df_error)
+      lsd_value <- t_value * sqrt(2 * mse / r)
 
+      if (verbose) {
         cat(sprintf("\nLSD value ( = %.2f): %.3f\n", alpha, lsd_value))
         cat("(Install 'agricolae' package for grouping letters)\n")
-
-        results$lsd <- list(value = lsd_value, t_value = t_value)
       }
+
+      results$lsd <- list(value = lsd_value, t_value = t_value)
     }
   }
   
   # Duncan's Multiple Range Test
   if (posthoc %in% c("duncan", "all")) {
-    if (verbose) {
-      cat("\n--- Duncan's Multiple Range Test (DMRT) ---\n")
+    if (verbose) cat("\n--- Duncan's Multiple Range Test (DMRT) ---\n")
 
-      if (requireNamespace("agricolae", quietly = TRUE)) {
-        duncan_result <- agricolae::duncan.test(model, treatment, alpha = alpha)
+    if (requireNamespace("agricolae", quietly = TRUE)) {
+      duncan_result <- agricolae::duncan.test(model, treatment, alpha = alpha)
 
+      if (verbose) {
         cat("\nTreatment Groups:\n")
         groups_df <- duncan_result$groups
         groups_df$treatment <- rownames(groups_df)
@@ -104,22 +127,22 @@ perform_posthoc <- function(model, data, response, treatment, mse, df_error,
 
         cat("\n")
         print(groups_df[, c("treatment", names(groups_df)[1], "groups")], row.names = FALSE)
-
-        results$duncan <- duncan_result
-      } else {
-        cat("(Install 'agricolae' package for Duncan's test)\n")
       }
+
+      results$duncan <- duncan_result
+    } else {
+      if (verbose) cat("(Install 'agricolae' package for Duncan's test)\n")
     }
   }
   
   # Tukey's HSD Test
   if (posthoc %in% c("tukey", "all")) {
-    if (verbose) {
-      cat("\n--- Tukey's Honest Significant Difference (HSD) Test ---\n")
+    if (verbose) cat("\n--- Tukey's Honest Significant Difference (HSD) Test ---\n")
 
-      if (requireNamespace("agricolae", quietly = TRUE)) {
-        hsd_result <- agricolae::HSD.test(model, treatment, alpha = alpha)
+    if (requireNamespace("agricolae", quietly = TRUE)) {
+      hsd_result <- agricolae::HSD.test(model, treatment, alpha = alpha)
 
+      if (verbose) {
         cat(sprintf("\nHSD value ( = %.2f): %.3f\n", alpha, hsd_result$statistics$HSD))
         cat("\nTreatment Groups:\n")
 
@@ -129,29 +152,31 @@ perform_posthoc <- function(model, data, response, treatment, mse, df_error,
 
         cat("\n")
         print(groups_df[, c("treatment", names(groups_df)[1], "groups")], row.names = FALSE)
+      }
 
-        results$tukey <- hsd_result
-      } else {
-        # Manual Tukey calculation
-        q_value <- qtukey(1 - alpha, nlevels(data[[treatment]]), df_error)
-        hsd_value <- q_value * sqrt(mse / r)
+      results$tukey <- hsd_result
+    } else {
+      # Manual Tukey calculation
+      q_value <- qtukey(1 - alpha, nlevels(data[[treatment]]), df_error)
+      hsd_value <- q_value * sqrt(mse / r)
 
+      if (verbose) {
         cat(sprintf("\nHSD value ( = %.2f): %.3f\n", alpha, hsd_value))
         cat("(Install 'agricolae' package for grouping letters)\n")
-
-        results$tukey <- list(value = hsd_value, q_value = q_value)
       }
+
+      results$tukey <- list(value = hsd_value, q_value = q_value)
     }
   }
   
   # Student-Newman-Keuls (SNK) Test
   if (posthoc %in% c("snk", "all")) {
-    if (verbose) {
-      cat("\n--- Student-Newman-Keuls (SNK) Test ---\n")
+    if (verbose) cat("\n--- Student-Newman-Keuls (SNK) Test ---\n")
 
-      if (requireNamespace("agricolae", quietly = TRUE)) {
-        snk_result <- agricolae::SNK.test(model, treatment, alpha = alpha)
+    if (requireNamespace("agricolae", quietly = TRUE)) {
+      snk_result <- agricolae::SNK.test(model, treatment, alpha = alpha)
 
+      if (verbose) {
         cat("\nTreatment Groups:\n")
         groups_df <- snk_result$groups
         groups_df$treatment <- rownames(groups_df)
@@ -159,22 +184,22 @@ perform_posthoc <- function(model, data, response, treatment, mse, df_error,
 
         cat("\n")
         print(groups_df[, c("treatment", names(groups_df)[1], "groups")], row.names = FALSE)
-
-        results$snk <- snk_result
-      } else {
-        cat("(Install 'agricolae' package for SNK test)\n")
       }
+
+      results$snk <- snk_result
+    } else {
+      if (verbose) cat("(Install 'agricolae' package for SNK test)\n")
     }
   }
   
   # Scheffe's Test
   if (posthoc %in% c("scheffe", "all")) {
-    if (verbose) {
-      cat("\n--- Scheff's Test ---\n")
+    if (verbose) cat("\n--- Scheff's Test ---\n")
 
-      if (requireNamespace("agricolae", quietly = TRUE)) {
-        scheffe_result <- agricolae::scheffe.test(model, treatment, alpha = alpha)
+    if (requireNamespace("agricolae", quietly = TRUE)) {
+      scheffe_result <- agricolae::scheffe.test(model, treatment, alpha = alpha)
 
+      if (verbose) {
         cat("\nTreatment Groups:\n")
         groups_df <- scheffe_result$groups
         groups_df$treatment <- rownames(groups_df)
@@ -182,29 +207,30 @@ perform_posthoc <- function(model, data, response, treatment, mse, df_error,
 
         cat("\n")
         print(groups_df[, c("treatment", names(groups_df)[1], "groups")], row.names = FALSE)
-
-        results$scheffe <- scheffe_result
-      } else {
-        cat("(Install 'agricolae' package for Scheff test)\n")
       }
+
+      results$scheffe <- scheffe_result
+    } else {
+      if (verbose) cat("(Install 'agricolae' package for Scheff test)\n")
     }
   }
   
   # Dunnett's Test (comparison with control)
   if (posthoc %in% c("dunnett", "all")) {
-    if (verbose) {
-      cat("\n--- Dunnett's Test (vs Control) ---\n")
+    if (verbose) cat("\n--- Dunnett's Test (vs Control) ---\n")
 
-      if (requireNamespace("multcomp", quietly = TRUE)) {
-        # Assuming first level is control
-        dunnett_result <- multcomp::glht(model, linfct = multcomp::mcp(
-          treatment = "Dunnett"))
-        dunnett_summary <- summary(dunnett_result)
-        print(dunnett_summary)
-        results$dunnett <- dunnett_result
-      } else {
-        cat("(Install 'multcomp' package for Dunnett's test)\n")
-      }
+    if (requireNamespace("multcomp", quietly = TRUE)) {
+      # Build the mcp() argument dynamically so the actual treatment factor
+      # name (whatever the user passed) is used, not the literal 'treatment'.
+      # First factor level is treated as the control.
+      mcp_arg <- stats::setNames(list("Dunnett"), treatment)
+      dunnett_result <- multcomp::glht(model,
+                                       linfct = do.call(multcomp::mcp, mcp_arg))
+      dunnett_summary <- summary(dunnett_result)
+      if (verbose) print(dunnett_summary)
+      results$dunnett <- dunnett_result
+    } else {
+      if (verbose) cat("(Install 'multcomp' package for Dunnett's test)\n")
     }
   }
   
@@ -264,11 +290,12 @@ check_assumptions <- function(model,
   results <- list()
   
   # 1. Normality Test (Shapiro-Wilk)
-  if (verbose) {
-    cat("\n--- Normality of Residuals (Shapiro-Wilk Test) ---\n")
+  if (verbose) cat("\n--- Normality of Residuals (Shapiro-Wilk Test) ---\n")
 
-    if (length(residuals) <= 5000) {
-      shapiro_test <- shapiro.test(residuals)
+  if (length(residuals) <= 5000) {
+    shapiro_test <- shapiro.test(residuals)
+
+    if (verbose) {
       cat(sprintf("W statistic: %.4f\n", shapiro_test$statistic))
       cat(sprintf("P-value: %.4f\n", shapiro_test$p.value))
 
@@ -278,9 +305,11 @@ check_assumptions <- function(model,
         cat("WARNING: Residuals may not be normally distributed (p < 0.05)\n")
         cat("Consider data transformation (log, sqrt, arcsin)\n")
       }
+    }
 
-      results$shapiro <- shapiro_test
-    } else {
+    results$shapiro <- shapiro_test
+  } else {
+    if (verbose) {
       cat("Sample size too large for Shapiro-Wilk test (n > 5000)\n")
       cat("Using Anderson-Darling test instead\n")
     }
@@ -646,7 +675,8 @@ anova_latin <- function(data, response, treatment, row, column,
   
   # Post-hoc
   posthoc_results <- perform_posthoc(model, data, response, treatment,
-                                      ms_error, df_error, posthoc, alpha)
+                                      ms_error, df_error, posthoc, alpha,
+                                      verbose = verbose)
   
   # Return
   result <- list(

@@ -27,103 +27,22 @@
 #' @author Lalit Kumar Rolaniya, ICAR-IIPR, Bikaner
 anova_sspd <- function(data, response, main_plot, sub_plot, sub_sub_plot, replication,
                             verbose = TRUE) {
-  
-  # Convert to factors
-  data[[main_plot]] <- as.factor(data[[main_plot]])
-  data[[sub_plot]] <- as.factor(data[[sub_plot]])
-  data[[sub_sub_plot]] <- as.factor(data[[sub_sub_plot]])
-  data[[replication]] <- as.factor(data[[replication]])
-  
-  # Number of levels
-  a <- nlevels(data[[main_plot]])      # Main plot levels
-  b <- nlevels(data[[sub_plot]])       # Sub-plot levels
-  c <- nlevels(data[[sub_sub_plot]])   # Sub-sub-plot levels
-  r <- nlevels(data[[replication]])    # Replications
-  
-  # Total degrees of freedom
-  N <- nrow(data)
-  
-  # Check for balanced design
-  if (N != a * b * c * r) {
-    warning("Unbalanced design detected: expected ", a * b * c * r, " observations but found ", N, ". ",
-            "Results assume balanced data and may be unreliable.", call. = FALSE)
-  }
-  
-  # Build formula for complete model
-  formula_full <- as.formula(paste(response, "~", replication, "+", 
-                                    main_plot, "+", replication, ":", main_plot, "+",
-                                    sub_plot, "+", main_plot, ":", sub_plot, "+",
-                                    replication, ":", main_plot, ":", sub_plot, "+",
-                                    sub_sub_plot, "+", main_plot, ":", sub_sub_plot, "+",
-                                    sub_plot, ":", sub_sub_plot, "+",
-                                    main_plot, ":", sub_plot, ":", sub_sub_plot))
-  
-  # Fit model
-  model <- aov(formula_full, data = data)
-  anova_table <- anova(model)
-  
-  # Extract components
-  SS <- anova_table$`Sum Sq`
-  df <- anova_table$Df
-  MS <- anova_table$`Mean Sq`
-  
-  # Create proper SSPD ANOVA table
-  source_names <- c("Replication", "Main Plot (A)", "Error (a)",
-                    "Sub-Plot (B)", "A  B", "Error (b)",
-                    "Sub-Sub-Plot (C)", "A  C", "B  C", "A  B  C", "Error (c)",
-                    "Total")
-  
-  # Calculate degrees of freedom
-  df_rep <- r - 1
-  df_a <- a - 1
-  df_error_a <- (r - 1) * (a - 1)
-  df_b <- b - 1
-  df_ab <- (a - 1) * (b - 1)
-  df_error_b <- a * (r - 1) * (b - 1)
-  df_c <- c - 1
-  df_ac <- (a - 1) * (c - 1)
-  df_bc <- (b - 1) * (c - 1)
-  df_abc <- (a - 1) * (b - 1) * (c - 1)
-  df_error_c <- a * b * (r - 1) * (c - 1)
-  df_total <- N - 1
-  
-  # Print results
-  if (verbose) {
-    cat("\n==========================================================\n")
-    cat("     SPLIT-SPLIT PLOT DESIGN ANOVA\n")
-    cat("==========================================================\n")
-    cat("\nExperimental Details:\n")
-    cat("  Main Plot Factor (A):", main_plot, "-", a, "levels\n")
-    cat("  Sub-Plot Factor (B):", sub_plot, "-", b, "levels\n")
-    cat("  Sub-Sub-Plot Factor (C):", sub_sub_plot, "-", c, "levels\n")
-    cat("  Replications:", r, "\n")
-    cat("  Total Observations:", N, "\n")
-    cat("\n----------------------------------------------------------\n")
-    cat("Response Variable:", response, "\n")
-    cat("----------------------------------------------------------\n")
-
-    print(anova_table)
-  }
-  
-  # Calculate CV%
-  grand_mean <- mean(data[[response]], na.rm = TRUE)
-  
-  if (verbose) {
-    cat("\n----------------------------------------------------------\n")
-    cat("Grand Mean:", round(grand_mean, 2), "\n")
-    cat("==========================================================\n")
-  }
-  
-  # Return results
+  groups <- list(main = main_plot, sub = sub_plot, subsub = sub_sub_plot)
+  core <- .aridagri_spd_anova(data, response, replication, groups, 0.05)
+  if (verbose)
+    .aridagri_print_spd(core, "Split-Split-Plot Design")
   result <- list(
-    anova_table = anova_table,
-    model = model,
-    grand_mean = grand_mean,
-    factors = list(main_plot = main_plot, sub_plot = sub_plot, 
-                   sub_sub_plot = sub_sub_plot, replication = replication),
-    levels = list(a = a, b = b, c = c, r = r)
+    design       = "Split-Split-Plot Design",
+    anova_table  = core$anova_table,
+    grand_mean   = core$grand_mean,
+    cv           = core$cv,
+    ms_error_a   = core$error_ms[["main"]],   df_error_a = core$error_df[["main"]],
+    ms_error_b   = core$error_ms[["sub"]],    df_error_b = core$error_df[["sub"]],
+    ms_error_c   = core$error_ms[["subsub"]], df_error_c = core$error_df[["subsub"]],
+    factor_means = core$factor_means,
+    comparisons  = core$comparisons,
+    model        = core$model
   )
-  
   class(result) <- "aridagri_anova"
   return(invisible(result))
 }
