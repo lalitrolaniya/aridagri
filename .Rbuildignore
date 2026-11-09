@@ -20,3 +20,4 @@
 ^cran-comments\.md$
 ^codecov\.yml$
 ^tests/testthat/Rplots\.pdf$
+^man/figures/README-

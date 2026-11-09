@@ -67,30 +67,91 @@ export_results(tab, "Table_2.xlsx")
 | Multivariate | `correlation_analysis()`, `pca_analysis()`, `path_analysis()`, `sem_analysis()` |
 | Figures and export | `plot()` methods, `plot_means()`, `plot_interaction()`, `plot_stability()`, `plot_response()`, `arid_plot()`, `export_results()` |
 
-## Examples
+## Examples and figures
+
+Most analyses have a `plot()` method, and there are dedicated functions for
+interaction, stability and response plots. Every figure is a ggplot2 object,
+so you can change labels or themes with `+` and save it with `ggsave()`.
+The example datasets are simulated.
+
+### Treatment means with letter groups
 
 ```r
-# Split plot: ANOVA with Error(a) and Error(b), and the four CDs
+res <- anova_rbd(mothbean_rbd, "seed_yield", "treatment", "block",
+                 posthoc = "duncan")
+plot(res, ylab = "Seed yield (kg/ha)",
+     title = "Moth bean seed yield (RCBD, DMRT)")
+```
+
+<img src="man/figures/README-means.png" alt="Bar chart of moth bean seed yield for eight treatments with standard error bars and Duncan letter groups" width="100%" />
+
+### Split plot: Error(a), Error(b) and the four CDs
+
+```r
 sp <- anova_spd(clusterbean_spd, "seed_yield", main_plot = "irrigation",
                 sub_plot = "nitrogen", replication = "rep")
-plot_interaction(sp)
+plot_interaction(sp, ylab = "Seed yield (kg/ha)",
+                 title = "Cluster bean: irrigation x nitrogen")
+```
 
-# Stability over six environments
+<img src="man/figures/README-interaction.png" alt="Interaction plot of cluster bean seed yield over three irrigation levels for four nitrogen treatments" width="100%" />
+
+### Stability over six environments
+
+```r
 st <- stability_analysis(pearlmillet_met, "genotype", "environment",
                          "rep", "grain_yield")
+plot_stability(st, "eberhart",
+               title = "Pearl millet: mean yield vs regression slope")
+```
+
+<img src="man/figures/README-stability.png" alt="Eberhart-Russell plot of mean grain yield against regression slope for ten pearl millet genotypes" width="100%" />
+
+AMMI and GGE biplots come from the same data:
+
+```r
 plot_stability(st, "ammi2")
 gge <- gge_biplot(pearlmillet_met, "genotype", "environment", "grain_yield")
 plot(gge, type = "which_won_where")
+```
 
-# Germplasm in an augmented design: adjusted means and heritability
+### Germplasm in an augmented design
+
+```r
 au <- anova_augmented(chickpea_augmented, "seed_yield", "entry", "block",
                       check_names = c("C1", "C2", "C3", "C4"))
+plot(au, top = 15, ylab = "Adjusted seed yield (kg/ha)",
+     title = "Chickpea germplasm: top 15 accessions and checks")
+```
 
-# Repeated measurements on the same plots or animals
+<img src="man/figures/README-augmented.png" alt="Dot plot of adjusted seed yield for the top 15 chickpea accessions and four checks" width="100%" />
+
+### Repeated measurements on the same plots
+
+```r
 rm <- anova_repeated(mungbean_repeated, "spad", "treatment", "das",
                      block = "block")
+plot(rm, ylab = "SPAD reading", title = "Mung bean chlorophyll over time") +
+  ggplot2::labs(x = "Days after sowing")
+```
 
-# Letters from a published table (means, error MS and df only)
+<img src="man/figures/README-repeated.png" alt="Line plot of mean SPAD readings at 25, 35, 45 and 55 days after sowing for four foliar spray treatments" width="100%" />
+
+### Nutrient response and economic optimum dose
+
+```r
+dose  <- c(0, 20, 40, 60, 80, 100)
+yield <- c(1100, 1350, 1520, 1610, 1650, 1660)
+nr <- nutrient_response(dose, yield, model = "all",
+                        price_output = 25, price_nutrient = 40)
+plot_response(nr, dose, yield, title = "Nitrogen response: four models")
+```
+
+<img src="man/figures/README-response.png" alt="Yield response to nitrogen fitted with quadratic, linear plateau, quadratic plateau and Mitscherlich models, with economic optimum doses marked" width="100%" />
+
+### Letters from a published table
+
+```r
 compare_means(c(T1 = 1180, T2 = 1265, T3 = 1342, T4 = 1410),
               mse = 3600, df_error = 12, reps = 4, method = "duncan")
 ```
