@@ -2,10 +2,15 @@
 
 <!-- badges: start -->
 [![R-CMD-check](https://github.com/lalitrolaniya/aridagri/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/lalitrolaniya/aridagri/actions/workflows/R-CMD-check.yaml)
-[![CRAN](https://www.r-pkg.org/badges/version/aridagri)](https://cran.r-project.org/package=aridagri)
-[![Downloads](https://cranlogs.r-pkg.org/badges/grand-total/aridagri)](https://cran.r-project.org/package=aridagri)
-[![DOI](https://img.shields.io/badge/DOI-10.1016/j.simpa.2026.100851-blue)](https://doi.org/10.1016/j.simpa.2026.100851)
-[![License: GPL-3](https://img.shields.io/badge/License-GPL3-blue.svg)](https://cran.r-project.org/web/licenses/GPL-3)
+[![CRAN status](https://www.r-pkg.org/badges/version/aridagri)](https://CRAN.R-project.org/package=aridagri)
+[![DOI](https://img.shields.io/badge/DOI-10.32614/CRAN.package.aridagri-blue)](https://doi.org/10.32614/CRAN.package.aridagri)
+[![Software Impacts](https://img.shields.io/badge/Software%20Impacts-10.1016/j.simpa.2026.100851-blue)](https://doi.org/10.1016/j.simpa.2026.100851)
+[![License: GPL-3](https://img.shields.io/badge/License-GPL--3-blue.svg)](https://cran.r-project.org/web/licenses/GPL-3)
+[![Downloads](https://cranlogs.r-pkg.org/badges/grand-total/aridagri)](https://CRAN.R-project.org/package=aridagri)
+[![Monthly Downloads](https://cranlogs.r-pkg.org/badges/aridagri)](https://CRAN.R-project.org/package=aridagri)
+[![Lifecycle: stable](https://img.shields.io/badge/lifecycle-stable-brightgreen.svg)](https://lifecycle.r-lib.org/articles/stages.html#stable)
+[![CodeFactor](https://www.codefactor.io/repository/github/lalitrolaniya/aridagri/badge)](https://www.codefactor.io/repository/github/lalitrolaniya/aridagri)
+[![pkgdown](https://github.com/lalitrolaniya/aridagri/actions/workflows/pkgdown.yaml/badge.svg)](https://lalitrolaniya.github.io/aridagri/)
 <!-- badges: end -->
 
 **aridagri** analyses the field experiments that agronomists and plant
