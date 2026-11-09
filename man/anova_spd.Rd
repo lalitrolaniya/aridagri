@@ -2,13 +2,7 @@
 % Please edit documentation in R/design_split_plot.R
 \name{anova_spd}
 \alias{anova_spd}
-\title{============================================================================
-SPLIT PLOT DESIGN ANALYSIS FUNCTIONS (All Variations)
-Package: aridagri
-Author: Lalit Kumar Rolaniya
-ICAR-Indian Institute of Pulses Research, Regional Centre, Bikaner
-============================================================================
-Split Plot Design ANOVA (Standard)}
+\title{Split-Plot Design ANOVA}
 \usage{
 anova_spd(
   data,
@@ -22,39 +16,64 @@ anova_spd(
 )
 }
 \arguments{
-\item{data}{Data frame containing the experimental data}
+\item{data}{Data frame containing the experimental data.}
 
-\item{response}{Name of the response variable}
+\item{response}{Name of the response variable.}
 
-\item{main_plot}{Name of main plot factor}
+\item{main_plot}{Name of the main-plot factor (A).}
 
-\item{sub_plot}{Name of sub-plot factor}
+\item{sub_plot}{Name of the sub-plot factor (B).}
 
-\item{replication}{Name of replication/block factor}
+\item{replication}{Name of the replication (block) column.}
 
-\item{posthoc}{Post-hoc test method}
+\item{posthoc}{Method for the letters (see
+\code{\link{perform_posthoc}}), or \code{"none"}. Default
+\code{"lsd"}.}
 
-\item{alpha}{Significance level}
+\item{alpha}{Significance level for CD and letters. Default 0.05.}
 
-\item{verbose}{Logical. If TRUE (default), prints formatted output to console.}
+\item{verbose}{Logical. If TRUE (default), prints the report.}
 }
 \value{
-List containing ANOVA table, means, and post-hoc results
+An object of class \code{aridagri_spd} with the corrected
+  \code{anova_table}, \code{cv_a}, \code{cv_b}, error mean squares and
+  df, \code{se_main}, \code{cd_main}, \code{se_sub}, \code{cd_sub},
+  \code{se_sub_same}, \code{cd_sub_same}, \code{se_main_same_sub},
+  \code{cd_main_same_sub}, \code{se_cd} (all comparisons),
+  \code{main_means} and \code{sub_means} (with letters),
+  \code{interaction_means}, \code{letters} (each factor within the
+  levels of the other) and \code{model}.
 }
 \description{
-Performs complete ANOVA for Split Plot Design with proper error terms for 
-main plot and sub-plot factors. Includes all standard post-hoc comparisons.
+Analysis of variance for a split-plot design in randomized complete
+blocks, with the main-plot factor tested against Error(a) and the
+sub-plot factor and interaction against Error(b). Gives CV(a), CV(b),
+SEm, SEd and CD for all four standard comparisons and letter groupings
+for main-plot means, sub-plot means and each factor within the levels
+of the other.
+}
+\details{
+Standard errors of difference (Gomez and Gomez, 1984, table 3.10):
+main-plot means \eqn{\sqrt{2E_a/(rb)}}, sub-plot means
+\eqn{\sqrt{2E_b/(ra)}}, sub-plot means at the same main-plot level
+\eqn{\sqrt{2E_b/r}}, and main-plot means at the same or different
+sub-plot level \eqn{\sqrt{2[(b-1)E_b + E_a]/(rb)}}. For the last
+comparison the CD uses the weighted t value
+\eqn{t' = [(b-1)E_b t_b + E_a t_a] / [(b-1)E_b + E_a]}.
+The data must be complete (every combination once in each
+replication).
 }
 \examples{
-data <- data.frame(
-  rep = rep(1:3, each = 12),
-  irrigation = rep(rep(c("I1", "I2", "I3"), each = 4), 3),
-  variety = rep(c("V1", "V2", "V3", "V4"), 9),
-  yield = rnorm(36, 1200, 150)
-)
-anova_spd(data, response = "yield", main_plot = "irrigation", 
-          sub_plot = "variety", replication = "rep")
+data(clusterbean_spd)
+res <- anova_spd(clusterbean_spd, response = "seed_yield",
+                 main_plot = "irrigation", sub_plot = "nitrogen",
+                 replication = "rep")
+res$se_cd
 
+}
+\references{
+Gomez, K.A. and Gomez, A.A. (1984). \emph{Statistical Procedures for
+Agricultural Research}, 2nd ed. John Wiley and Sons, New York.
 }
 \author{
 Lalit Kumar Rolaniya, ICAR-IIPR, Bikaner

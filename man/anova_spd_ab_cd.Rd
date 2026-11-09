@@ -2,7 +2,7 @@
 % Please edit documentation in R/design_split_plot.R
 \name{anova_spd_ab_cd}
 \alias{anova_spd_ab_cd}
-\title{Split Plot Design with (AB) Main and (CD) Sub}
+\title{Split-Plot Design with Factorial Main and Sub-Plots}
 \usage{
 anova_spd_ab_cd(
   data,
@@ -12,49 +12,52 @@ anova_spd_ab_cd(
   sub_factor1,
   sub_factor2,
   replication,
-  verbose = TRUE
+  verbose = TRUE,
+  posthoc = "lsd",
+  alpha = 0.05
 )
 }
 \arguments{
-\item{data}{Data frame containing the experimental data}
+\item{data}{Data frame containing the experimental data.}
 
-\item{response}{Name of the response variable}
+\item{response}{Name of the response variable.}
 
-\item{main_factor1}{First factor in main plot (A)}
+\item{main_factor1}{First main-plot factor (A).}
 
-\item{main_factor2}{Second factor in main plot (B)}
+\item{main_factor2}{Second main-plot factor (B).}
 
-\item{sub_factor1}{First factor in sub-plot (C)}
+\item{sub_factor1}{First sub-plot factor (C).}
 
-\item{sub_factor2}{Second factor in sub-plot (D)}
+\item{sub_factor2}{Second sub-plot factor (D).}
 
-\item{replication}{Name of replication factor}
+\item{replication}{Name of the replication column.}
 
-\item{verbose}{Logical. If TRUE (default), prints formatted output to console.}
+\item{verbose}{Logical. If TRUE (default), prints the report.}
+
+\item{posthoc}{Method for the letters (default \code{"lsd"}).}
+
+\item{alpha}{Significance level. Default 0.05.}
 }
 \value{
-List containing ANOVA table and means
+An object of class \code{aridagri_spd_abcd}; see
+  \code{\link{anova_spd_ab_main}} for the components.
 }
 \description{
-Performs ANOVA for Split Plot Design where main plot contains factorial 
-combination of AB and sub-plot contains factorial combination of CD.
-Complex design for multi-factor experiments.
+Split-plot design where the main plots carry A x B and the sub-plots
+carry C x D. Main-plot sources are tested against Error(a), all other
+sources against Error(b).
 }
 \examples{
-# Example: Irrigation  Tillage (main), Variety  Nitrogen (sub)
-data <- expand.grid(
-  rep = 1:3,
-  irrigation = c("I1", "I2"),
-  tillage = c("CT", "ZT"),
-  variety = c("V1", "V2"),
-  nitrogen = c("N1", "N2", "N3")
-)
-data$yield <- rnorm(nrow(data), 1200, 150)
-
-anova_spd_ab_cd(data, response = "yield",
-                main_factor1 = "irrigation", main_factor2 = "tillage",
-                sub_factor1 = "variety", sub_factor2 = "nitrogen",
-                replication = "rep")
+data <- expand.grid(rep = 1:3, irrigation = c("I1", "I2"),
+                    tillage = c("CT", "ZT"), variety = c("V1", "V2"),
+                    nitrogen = c("N1", "N2", "N3"))
+set.seed(5)
+data$yield <- rnorm(nrow(data), 1200, 80)
+res <- anova_spd_ab_cd(data, response = "yield",
+                       main_factor1 = "irrigation", main_factor2 = "tillage",
+                       sub_factor1 = "variety", sub_factor2 = "nitrogen",
+                       replication = "rep", verbose = FALSE)
+res$anova_table
 
 }
 \author{

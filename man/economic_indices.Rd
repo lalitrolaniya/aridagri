@@ -7,22 +7,26 @@
 economic_indices(gross_return, total_cost, verbose = TRUE)
 }
 \arguments{
-\item{gross_return}{Gross returns (Rs/ha)}
+\item{gross_return}{Gross return (Rs/ha).}
 
-\item{total_cost}{Total cost (Rs/ha)}
+\item{total_cost}{Total cost of cultivation (Rs/ha).}
 
-\item{verbose}{Logical. If TRUE (default), prints formatted output to console.}
+\item{verbose}{Logical. If TRUE (default), prints the table.}
 }
 \value{
-Data frame with economic indices
+A data frame of class \code{aridagri_economics} with
+  \code{Net_Return}, \code{BC_Ratio} (gross return / cost) and
+  \code{Return_per_Rupee} (net return / cost).
 }
 \description{
-Calculates B:C ratio and economic efficiency metrics.
+Net return, benefit-cost ratio and return per rupee invested from gross
+return and total cost.
 }
 \examples{
 economic_indices(gross_return = c(75000, 82000), total_cost = c(35000, 38000))
 
 }
 \author{
-Lalit Kumar Rolaniya, Ram Lal Jat, Monika Punia, Raja Ram Choudhary
+Lalit Kumar Rolaniya, Ram Lal Jat, Monika Punia, Raja Ram
+  Choudhary, Hemant Poonia
 }

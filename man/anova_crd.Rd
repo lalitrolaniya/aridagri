@@ -2,13 +2,7 @@
 % Please edit documentation in R/design_basic.R
 \name{anova_crd}
 \alias{anova_crd}
-\title{============================================================================
-COMPREHENSIVE EXPERIMENTAL DESIGN ANALYSIS FUNCTIONS
-Package: aridagri
-Author: Lalit Kumar Rolaniya
-ICAR-Indian Institute of Pulses Research, Regional Centre, Bikaner
-============================================================================
-Completely Randomized Design (CRD) ANOVA}
+\title{Completely Randomized Design (CRD) ANOVA}
 \usage{
 anova_crd(
   data,
@@ -16,37 +10,65 @@ anova_crd(
   treatment,
   posthoc = "lsd",
   alpha = 0.05,
-  verbose = TRUE
+  verbose = TRUE,
+  control = NULL
 )
 }
 \arguments{
-\item{data}{Data frame containing the experimental data}
+\item{data}{Data frame containing the experimental data.}
 
-\item{response}{Name of the response variable (as string)}
+\item{response}{Name of the response variable (character).}
 
-\item{treatment}{Name of treatment factor}
+\item{treatment}{Name of the treatment column.}
 
-\item{posthoc}{Post-hoc test: "lsd", "duncan", "tukey", "snk", "scheffe", or "all"}
+\item{posthoc}{Post-hoc test(s): \code{"lsd"}, \code{"duncan"},
+\code{"tukey"}, \code{"snk"}, \code{"scheffe"}, \code{"bonferroni"},
+\code{"dunnett"}, a vector of these, \code{"all"} or \code{"none"}.
+The first method supplies the letters in the means table.}
 
-\item{alpha}{Significance level (default 0.05)}
+\item{alpha}{Significance level for the CD and the post-hoc tests
+(default 0.05).}
 
-\item{verbose}{Logical. If TRUE (default), prints formatted output to console.}
+\item{verbose}{Logical. If TRUE (default), prints the report.}
+
+\item{control}{Control level for Dunnett's test (default: first level).}
 }
 \value{
-List containing ANOVA table, means, post-hoc results, and diagnostics
+An object of class \code{aridagri_anova} with
+  \code{anova_table}, \code{model}, \code{grand_mean}, \code{cv},
+  \code{ms_error}, \code{df_error}, \code{se_mean} (SEm),
+  \code{se_diff} (SEd), \code{cd} (at \code{alpha}), \code{cd_5},
+  \code{cd_1}, \code{treatment_means} (mean, SD, N, SE and letters),
+  \code{posthoc}, \code{diagnostics}, \code{significance} and
+  \code{balanced}.
 }
 \description{
-Performs complete ANOVA for Completely Randomized Design with post-hoc tests,
-assumptions checking, and publication-ready output.
+Analysis of variance for a completely randomized design with standard
+errors, critical difference, coefficient of variation, post-hoc letter
+groupings and assumption checks. Unequal replication is handled
+exactly.
+}
+\details{
+SEm = sqrt(MSE / r), SEd = sqrt(2 MSE / r) and CD = t(alpha/2, error
+df) x SEd, where r is the number of replications (the harmonic mean
+when replication is unequal; the letters then use the exact SE of each
+pair). CV = 100 sqrt(MSE) / grand mean. Rows with a missing response
+are dropped with a message.
 }
 \examples{
 data <- data.frame(
   treatment = rep(c("T1", "T2", "T3", "T4"), each = 5),
-  yield = c(rnorm(5, 1200, 50), rnorm(5, 1350, 60), 
-            rnorm(5, 1100, 55), rnorm(5, 1450, 65))
+  yield = c(1210, 1185, 1242, 1198, 1225, 1340, 1362, 1318, 1375, 1350,
+            1105, 1090, 1122, 1131, 1098, 1445, 1462, 1430, 1471, 1452)
 )
-anova_crd(data, response = "yield", treatment = "treatment", posthoc = "all")
+res <- anova_crd(data, response = "yield", treatment = "treatment",
+                 posthoc = "duncan")
+res$treatment_means
 
+}
+\references{
+Gomez, K.A. and Gomez, A.A. (1984). \emph{Statistical Procedures for
+Agricultural Research}, 2nd ed. John Wiley and Sons, New York.
 }
 \author{
 Lalit Kumar Rolaniya, ICAR-IIPR, Bikaner

@@ -2,7 +2,7 @@
 % Please edit documentation in R/design_basic.R
 \name{anova_rbd_pooled}
 \alias{anova_rbd_pooled}
-\title{Pooled Analysis of RBD Experiments (Multi-Environment/Year)}
+\title{Combined (Pooled) Analysis of RCBD Experiments over Environments}
 \usage{
 anova_rbd_pooled(
   data,
@@ -12,45 +12,88 @@ anova_rbd_pooled(
   block,
   posthoc = "lsd",
   alpha = 0.05,
-  verbose = TRUE
+  verbose = TRUE,
+  env_effect = c("fixed", "random"),
+  control = NULL
 )
 }
 \arguments{
-\item{data}{Data frame containing combined data from all environments}
+\item{data}{Data frame containing the experimental data.}
 
-\item{response}{Name of the response variable}
+\item{response}{Name of the response variable (character).}
 
-\item{treatment}{Name of treatment factor}
+\item{treatment}{Name of the treatment column.}
 
-\item{environment}{Name of environment/year/location factor}
+\item{environment}{Name of the environment (year, season or location)
+column.}
 
-\item{block}{Name of block factor (nested within environment)}
+\item{block}{Name of the block column (blocks are nested within
+environments; labels may repeat across environments).}
 
-\item{posthoc}{Post-hoc test method}
+\item{posthoc}{Post-hoc test(s): \code{"lsd"}, \code{"duncan"},
+\code{"tukey"}, \code{"snk"}, \code{"scheffe"}, \code{"bonferroni"},
+\code{"dunnett"}, a vector of these, \code{"all"} or \code{"none"}.
+The first method supplies the letters in the means table.}
 
-\item{alpha}{Significance level}
+\item{alpha}{Significance level for the CD and the post-hoc tests
+(default 0.05).}
 
-\item{verbose}{Logical. If TRUE (default), prints formatted output to console.}
+\item{verbose}{Logical. If TRUE (default), prints the report.}
+
+\item{env_effect}{Either \code{"fixed"} (default; years or seasons of
+interest) or \code{"random"} (locations or years treated as a sample).}
+
+\item{control}{Control level for Dunnett's test (default: first level).}
 }
 \value{
-List containing pooled ANOVA, individual ANOVAs, and interaction analysis
+An object of class \code{aridagri_pooled} with
+  \code{pooled_anova} (combined ANOVA with correct F-tests),
+  \code{individual_anovas}, \code{environment_summary} (mean, MSE, CV,
+  F, p and CD of each environment), \code{bartlett_test},
+  \code{treatment_means} (with letters), \code{interaction_means},
+  \code{se_treatment}, \code{cd_treatment}, \code{se_environment},
+  \code{cd_environment}, \code{se_interaction}, \code{cd_interaction},
+  \code{posthoc}, \code{cv}, \code{grand_mean}, \code{mse_values} and
+  \code{model}.
 }
 \description{
-Performs pooled ANOVA for RBD experiments conducted across multiple 
-environments, years, or locations. Tests homogeneity of error variances
-using Bartlett's test before pooling.
+Combined analysis of variance for the same set of treatments tested in a
+randomized complete block design in several environments (years,
+seasons or locations). Gives the analysis of each environment,
+Bartlett's test of homogeneity of error variances, the combined ANOVA
+with the correct error term for every source, SE and CD for treatment,
+environment and interaction means, and letter groupings for the
+treatment means.
+}
+\details{
+Sources and their F-tests (McIntosh, 1983; Gomez and Gomez, 1984):
+environment is tested against blocks within environments; the
+treatment x environment interaction against the pooled error; the
+treatment effect against the pooled error when environments are fixed
+and against the treatment x environment mean square when they are
+random. With random environments the usual restricted mixed model is
+assumed, so environment is still tested against blocks within
+environments. The SE and CD of treatment means use the same denominator
+as the treatment F-test. Bartlett's chi-square tests whether the error
+variances of the environments can be pooled; when it is significant,
+interpret the combined analysis with care.
 }
 \examples{
-# Data from 3 years
-data <- data.frame(
-  year = rep(c("Y1", "Y2", "Y3"), each = 20),
-  rep = rep(rep(1:4, each = 5), 3),
-  treatment = rep(c("T1", "T2", "T3", "T4", "T5"), 12),
-  yield = rnorm(60, 1200, 150)
-)
-anova_rbd_pooled(data, response = "yield", treatment = "treatment",
-                 environment = "year", block = "rep")
+data(pearlmillet_met)
+res <- anova_rbd_pooled(pearlmillet_met, response = "grain_yield",
+                        treatment = "genotype", environment = "environment",
+                        block = "rep", verbose = FALSE)
+res$pooled_anova
+res$bartlett_test
 
+}
+\references{
+McIntosh, M.S. (1983). Analysis of combined experiments.
+\emph{Agronomy Journal}, 75(1), 153-155.
+\doi{10.2134/agronj1983.00021962007500010041x}
+
+Gomez, K.A. and Gomez, A.A. (1984). \emph{Statistical Procedures for
+Agricultural Research}, 2nd ed. John Wiley and Sons, New York.
 }
 \author{
 Lalit Kumar Rolaniya, ICAR-IIPR, Bikaner

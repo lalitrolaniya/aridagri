@@ -2,7 +2,7 @@
 % Please edit documentation in R/agronomic_analysis.R
 \name{yield_gap_analysis}
 \alias{yield_gap_analysis}
-\title{Yield Gap Analysis}
+\title{Yield Gap and Front-Line Demonstration Indices}
 \usage{
 yield_gap_analysis(
   actual_yield,
@@ -12,24 +12,45 @@ yield_gap_analysis(
 )
 }
 \arguments{
-\item{actual_yield}{Actual yield (kg/ha)}
+\item{actual_yield}{Actual (farmers' practice) yield.}
 
-\item{potential_yield}{Potential yield (kg/ha)}
+\item{potential_yield}{Potential yield of the crop or variety.}
 
-\item{attainable_yield}{Attainable yield (kg/ha, optional)}
+\item{attainable_yield}{Attainable or demonstration yield (optional).}
 
-\item{verbose}{Logical. If TRUE (default), prints formatted output to console.}
+\item{verbose}{Logical. If TRUE (default), prints the table.}
 }
 \value{
-Data frame with yield gap analysis
+A data frame of class \code{aridagri_yield_gap}.
 }
 \description{
-Calculates yield gaps comparing actual with potential yields.
+Yield gap between actual and potential yields. When an attainable yield
+(for example the yield of an improved-practice or front-line
+demonstration plot) is supplied, the gap is split into a technology gap
+and an extension gap and the technology index is given.
+}
+\details{
+Total gap = potential - actual; yield efficiency = 100 x actual /
+potential. With attainable yield (Samui et al., 2000): technology gap =
+potential - attainable; extension gap = attainable - actual; technology
+index = 100 x technology gap / potential; yield increase over farmers'
+practice = 100 x (attainable - actual) / actual.
 }
 \examples{
 yield_gap_analysis(actual_yield = c(800, 950, 720), potential_yield = 1500)
+# Front-line demonstrations: farmers' practice vs demonstration plots
+yield_gap_analysis(actual_yield = c(820, 760, 905),
+                   potential_yield = 1500,
+                   attainable_yield = c(1080, 1010, 1150))
 
 }
+\references{
+Samui, S.K., Maitra, S., Roy, D.K., Mondal, A.K. and Saha, D. (2000).
+Evaluation of front line demonstration on groundnut (Arachis hypogaea
+L.). \emph{Journal of the Indian Society of Coastal Agricultural
+Research}, 18(2), 180-183.
+}
 \author{
-Lalit Kumar Rolaniya, Ram Lal Jat, Monika Punia, Raja Ram Choudhary
+Lalit Kumar Rolaniya, Ram Lal Jat, Monika Punia, Raja Ram
+  Choudhary, Hemant Poonia
 }

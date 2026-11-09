@@ -1,0 +1,34 @@
+bibentry(
+  bibtype  = "Article",
+  title    = "aridagri: An R package for comprehensive statistical analysis of agricultural field experiments",
+  author   = c(
+    person("Lalit Kumar", "Rolaniya"),
+    person("Ram Lal", "Jat"),
+    person("Monika", "Punia"),
+    person("Raja Ram", "Choudhary"),
+    person("Hemant", "Poonia")
+  ),
+  journal  = "Software Impacts",
+  year     = "2026",
+  volume   = "29",
+  pages    = "100851",
+  doi      = "10.1016/j.simpa.2026.100851",
+  header   = "To cite aridagri in publications, please use:"
+)
+
+bibentry(
+  bibtype  = "Manual",
+  title    = "aridagri: Comprehensive Statistical Tools for Agricultural Research",
+  author   = c(
+    person("Lalit Kumar", "Rolaniya"),
+    person("Ram Lal", "Jat"),
+    person("Monika", "Punia"),
+    person("Raja Ram", "Choudhary"),
+    person("Hemant", "Poonia")
+  ),
+  year     = "2026",
+  note     = sprintf("R package version %s", meta$Version),
+  url      = "https://CRAN.R-project.org/package=aridagri",
+  doi      = "10.32614/CRAN.package.aridagri",
+  header   = "For the software itself:"
+)

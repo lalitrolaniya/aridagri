@@ -7,15 +7,14 @@
 \method{print}{aridagri_pca}(x, ...)
 }
 \arguments{
-\item{x}{An object of class 'aridagri_pca' from \code{\link{pca_analysis}}}
+\item{x}{An object of class \code{aridagri_pca} from
+\code{\link{pca_analysis}}.}
 
-\item{...}{Additional arguments (currently unused)}
+\item{...}{Additional arguments (unused).}
 }
 \value{
-No return value, called for side effects. Prints the number of
-  components retained by Kaiser criterion and cumulative variance explained
-  to the console. The input object is returned invisibly.
+The input object, invisibly.
 }
 \description{
-Prints a formatted summary of Principal Component Analysis (PCA) results.
+Prints the number of components retained and the variance they explain.
 }

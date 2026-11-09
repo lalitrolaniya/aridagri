@@ -2,39 +2,102 @@
 % Please edit documentation in R/design_additional.R
 \name{anova_augmented}
 \alias{anova_augmented}
-\title{Augmented Block Design ANOVA}
+\title{Augmented Randomized Complete Block Design}
 \usage{
-anova_augmented(data, response, genotype, block, check_names, verbose = TRUE)
+anova_augmented(
+  data,
+  response,
+  genotype,
+  block,
+  check_names,
+  verbose = TRUE,
+  alpha = 0.05,
+  k = 2.063
+)
 }
 \arguments{
-\item{data}{Data frame containing the data}
+\item{data}{Data frame containing the data.}
 
-\item{response}{Name of response variable}
+\item{response}{Name of the response variable.}
 
-\item{genotype}{Name of genotype/entry column}
+\item{genotype}{Name of the entry (genotype) column.}
 
-\item{block}{Name of block column}
+\item{block}{Name of the block column.}
 
-\item{check_names}{Vector of check variety names}
+\item{check_names}{Character vector with the names of the check
+entries.}
 
-\item{verbose}{Logical. If TRUE (default), prints formatted output to console.}
+\item{verbose}{Logical. If TRUE (default), prints the report.}
+
+\item{alpha}{Significance level for CD. Default 0.05.}
+
+\item{k}{Standardized selection differential for genetic advance.
+Default 2.063 (5\% selection intensity).}
 }
 \value{
-List containing ANOVA results and adjusted means
+An object of class \code{aridagri_augmented} with
+  \code{anova_adjusted} (treatments after blocks),
+  \code{anova_partitioned} (blocks after treatments, treatments split),
+  \code{adjusted_means} (all entries with type, raw and adjusted mean,
+  SE and block), \code{se_diff} and \code{cd} (the four comparisons),
+  \code{test_vs_checks} (difference of each test entry from the check
+  mean and the best check, with significance), \code{block_effects},
+  \code{genetic_parameters}, \code{mse}, \code{df_error},
+  \code{anova_checks} and \code{model}.
 }
 \description{
-Performs ANOVA for Augmented Randomized Block Design where checks are
-replicated and test entries appear once.
+Analysis of an augmented randomized complete block design (Federer,
+1956), where a few check varieties are replicated in every block and
+the new (test) entries appear once. Gives the ANOVA with the treatment
+sum of squares split into checks, tests and checks vs tests, adjusted
+means of all entries, the four standard errors of difference, a
+comparison of every test entry with the checks, and genetic parameters
+of the test entries.
+}
+\details{
+Block effects are estimated from the checks and removed from the test
+entries: adjusted value = observed value - (mean of checks in its block -
+overall check mean). This equals the least-squares mean from the model
+\code{response ~ block + genotype}, which is used here, so the standard
+errors are exact. With \eqn{b} blocks and \eqn{c} checks the four
+standard errors of difference are: two check means
+\eqn{\sqrt{2 MSE / b}}; two test entries in the same block
+\eqn{\sqrt{2 MSE}}; two test entries in different blocks
+\eqn{\sqrt{2 MSE (1 + 1/c)}}; a test entry and a check mean
+\eqn{\sqrt{MSE (1 + 1/b + 1/c - 1/(bc))}}.
+
+Two ANOVA tables are given. In the first, treatments are fitted after
+blocks and their sum of squares is split into tests vs checks, checks
+and tests, each adjusted for blocks. In the second, blocks are fitted
+after treatments and the treatment sum of squares (ignoring blocks) is
+split into checks, tests and checks vs tests (Federer, 1961).
+
+Genetic parameters of the test entries use the block-adjusted mean
+square among tests from the first table: phenotypic variance
+\eqn{\sigma^2_p} = MS(tests), error variance \eqn{\sigma^2_e} = MSE,
+genotypic variance \eqn{\sigma^2_g = \sigma^2_p - \sigma^2_e},
+broad-sense heritability \eqn{h^2 = \sigma^2_g / \sigma^2_p}, GCV and
+PCV in percent of the mean of the adjusted test values, and genetic
+advance \eqn{GA = k h^2 \sigma_p}.
 }
 \examples{
-data <- data.frame(
-  block = rep(1:5, each = 7),
-  genotype = c(rep(c("C1","C2","C3"), 5), paste0("T", 1:20)),
-  yield = rnorm(35, 1200, 150)
-)
-# Note: This is simplified example
+data(chickpea_augmented)
+res <- anova_augmented(chickpea_augmented, response = "seed_yield",
+                       genotype = "entry", block = "block",
+                       check_names = c("C1", "C2", "C3", "C4"))
+head(res$test_vs_checks)
+res$genetic_parameters
 
 }
+\references{
+Federer, W.T. (1956). Augmented (or hoonuiaku) designs.
+\emph{Hawaiian Planters' Record}, 55, 191-208.
+
+Federer, W.T. (1961). Augmented designs with one-way elimination of
+heterogeneity. \emph{Biometrics}, 17(3), 447-473.
+\doi{10.2307/2527837}
+}
 \author{
-Lalit Kumar Rolaniya, Ram Lal Jat, Monika Punia, Raja Ram Choudhary
+Lalit Kumar Rolaniya, Ram Lal Jat, Monika Punia, Raja Ram
+  Choudhary, Hemant Poonia
 }

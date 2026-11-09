@@ -10,34 +10,78 @@ anova_alpha_lattice(
   genotype,
   replication,
   block,
-  verbose = TRUE
+  verbose = TRUE,
+  analysis = c("reml", "intra"),
+  posthoc = "lsd",
+  alpha = 0.05
 )
 }
 \arguments{
-\item{data}{Data frame containing the data}
+\item{data}{Data frame containing the data.}
 
-\item{response}{Name of response variable}
+\item{response}{Name of the response variable.}
 
-\item{genotype}{Name of genotype column}
+\item{genotype}{Name of the genotype column.}
 
-\item{replication}{Name of replication column}
+\item{replication}{Name of the replication column.}
 
-\item{block}{Name of incomplete block column (nested within replication)}
+\item{block}{Name of the incomplete block column (nested within
+replication; labels may repeat across replications).}
 
-\item{verbose}{Logical. If TRUE (default), prints formatted output to console.}
+\item{verbose}{Logical. If TRUE (default), prints the report.}
+
+\item{analysis}{\code{"reml"} (default; replications and incomplete
+blocks random, fitted with \pkg{nlme}, so that inter-block information
+is recovered) or \code{"intra"} (blocks fixed; the classical
+intra-block analysis). If the REML fit fails, the intra-block analysis
+is used with a message.}
+
+\item{posthoc}{Method for the letters (default \code{"lsd"}).}
+
+\item{alpha}{Significance level. Default 0.05.}
 }
 \value{
-List containing ANOVA results
+An object of class \code{aridagri_alpha} with
+  \code{anova_table}, \code{genotype_means} (adjusted means with SE and
+  letters, highest first), \code{avg_sed}, \code{cd} (from the average
+  SEd), \code{efficiency} (percent, relative to RCBD), \code{cv},
+  \code{grand_mean}, \code{posthoc}, \code{variance_components} (REML)
+  and \code{model}.
 }
 \description{
-Performs ANOVA for Alpha Lattice (Resolvable Incomplete Block) Design.
+Analysis of an alpha lattice (resolvable incomplete block) design.
+Gives the intra-block ANOVA, genotype means adjusted for incomplete
+blocks with exact standard errors and letter groupings, and the
+efficiency of the design relative to a randomized complete block design.
+By default replications and blocks are treated as random (REML), so
+that inter-block information is recovered (Patterson and Williams,
+1976); \code{analysis = "intra"} gives the classical intra-block
+estimates.
+}
+\details{
+The intra-block ANOVA is the sequential analysis of the model
+replication + block(replication) + genotype: genotypes are tested after
+blocks. Blocks within replications are also shown adjusted for
+genotypes. Adjusted means are least-squares means. The efficiency
+relative to an RCBD is the average variance of a difference under the
+RCBD analysis (\eqn{2 MSE_{RCBD} / r}) divided by the average variance
+of a difference of adjusted means. With REML, letters and CD use the
+intra-block error degrees of freedom, an approximation.
 }
 \examples{
-data <- expand.grid(rep = 1:2, block = 1:5, entry = 1:4)
-data$genotype <- paste0("G", 1:nrow(data))
-data$yield <- rnorm(nrow(data), 1200, 150)
+data(cowpea_alpha)
+res <- anova_alpha_lattice(cowpea_alpha, response = "grain_yield",
+                           genotype = "genotype", replication = "rep",
+                           block = "block")
+head(res$genotype_means)
 
 }
+\references{
+Patterson, H.D. and Williams, E.R. (1976). A new class of resolvable
+incomplete block designs. \emph{Biometrika}, 63(1), 83-92.
+\doi{10.1093/biomet/63.1.83}
+}
 \author{
-Lalit Kumar Rolaniya, Ram Lal Jat, Monika Punia, Raja Ram Choudhary
+Lalit Kumar Rolaniya, Ram Lal Jat, Monika Punia, Raja Ram
+  Choudhary, Hemant Poonia
 }

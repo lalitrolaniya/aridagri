@@ -2,32 +2,70 @@
 % Please edit documentation in R/agronomic_analysis.R
 \name{crop_growth_analysis}
 \alias{crop_growth_analysis}
-\title{Crop Growth Analysis (CGR, RGR, NAR, LAI)}
+\title{Crop Growth Analysis (CGR, RGR, NAR, LAI, LAD)}
 \usage{
-crop_growth_analysis(dry_weight, leaf_area, days, verbose = TRUE)
+crop_growth_analysis(
+  dry_weight,
+  leaf_area = NULL,
+  days,
+  verbose = TRUE,
+  ground_area = NULL
+)
 }
 \arguments{
-\item{dry_weight}{Vector of dry matter at different stages}
+\item{dry_weight}{Dry matter at each sampling (g per sample).}
 
-\item{leaf_area}{Vector of leaf area at different stages}
+\item{leaf_area}{Leaf area at each sampling (cm2 per sample), or
+\code{NULL} to compute only CGR and RGR.}
 
-\item{days}{Vector of days after sowing}
+\item{days}{Days after sowing at each sampling (strictly increasing).}
 
-\item{verbose}{Logical. If TRUE (default), prints formatted output to console.}
+\item{verbose}{Logical. If TRUE (default), prints the table.}
+
+\item{ground_area}{Land area occupied by each sample (m2). When given,
+CGR is expressed in g m-2 day-1 and LAI = leaf area / ground area.
+When \code{NULL} (default), CGR is in g per sample per day and LAI is
+leaf area / 10000 (that is, leaf area in cm2 per m2 of ground).}
 }
 \value{
-Data frame with growth parameters
+A data frame of class \code{aridagri_growth} with one row per
+  interval: \code{Period}, \code{CGR}, \code{RGR} and, with leaf area,
+  \code{NAR}, \code{LAI_start}, \code{LAI_end} and \code{LAD}.
 }
 \description{
-Calculates crop growth parameters from sequential harvest data.
+Classical growth analysis from sequential harvests: crop growth rate,
+relative growth rate, net assimilation rate, leaf area index and leaf
+area duration for each interval between samplings.
+}
+\details{
+For two samplings at \eqn{t_1} and \eqn{t_2} (Watson, 1952;
+Radford, 1967):
+\itemize{
+  \item CGR = \eqn{(W_2 - W_1) / [P (t_2 - t_1)]}, P = ground area
+  \item RGR = \eqn{(\ln W_2 - \ln W_1) / (t_2 - t_1)} (g g-1 day-1)
+  \item NAR = \eqn{\frac{W_2 - W_1}{t_2 - t_1} \times
+    \frac{\ln L_2 - \ln L_1}{L_2 - L_1}}, reported in g m-2 (leaf)
+    day-1
+  \item LAD = \eqn{(LAI_1 + LAI_2)(t_2 - t_1) / 2} (days)
+}
 }
 \examples{
 dry_weight <- c(0.5, 2.1, 8.5, 25, 45, 62, 75)
 leaf_area <- c(15, 85, 350, 800, 950, 850, 600)
 days <- c(15, 30, 45, 60, 75, 90, 105)
-crop_growth_analysis(dry_weight, leaf_area, days)
+crop_growth_analysis(dry_weight, leaf_area, days, ground_area = 0.09)
 
 }
+\references{
+Radford, P.J. (1967). Growth analysis formulae: their use and abuse.
+\emph{Crop Science}, 7(3), 171-175.
+\doi{10.2135/cropsci1967.0011183X000700030001x}
+
+Watson, D.J. (1952). The physiological basis of variation in yield.
+\emph{Advances in Agronomy}, 4, 101-145.
+\doi{10.1016/S0065-2113(08)60307-7}
+}
 \author{
-Lalit Kumar Rolaniya, Ram Lal Jat, Monika Punia, Raja Ram Choudhary
+Lalit Kumar Rolaniya, Ram Lal Jat, Monika Punia, Raja Ram
+  Choudhary, Hemant Poonia
 }

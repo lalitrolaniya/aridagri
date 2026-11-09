@@ -1,56 +1,3 @@
-#' Split-Split Plot Design ANOVA
-#'
-#' @description
-#' Performs complete ANOVA for Split-Split Plot Design with proper error terms
-#' for main plot, sub-plot, and sub-sub-plot factors. Generates publication-ready
-#' ANOVA table with significance levels.
-#'
-#' @param data Data frame containing the experimental data
-#' @param response Name of the response variable (as string)
-#' @param main_plot Name of main plot factor
-#' @param sub_plot Name of sub-plot factor
-#' @param sub_sub_plot Name of sub-sub-plot factor
-#' @param replication Name of replication/block factor
-#'
-#' @param verbose Logical. If TRUE (default), prints formatted output to console.
-#'
-#' @return List containing ANOVA table, means, and significance tests
-#'
-#' @examples
-#' # Example with sample data
-#' data <- expand.grid(rep=1:3, A=c('A1','A2'), B=c('B1','B2'), C=c('C1','C2'))
-#' data$yield <- rnorm(24, 1200, 150)
-#' anova_sspd(data, response='yield', main_plot='A', sub_plot='B',
-#'            sub_sub_plot='C', replication='rep')
-#'
-#' @export
-#' @author Lalit Kumar Rolaniya, ICAR-IIPR, Bikaner
-anova_sspd <- function(data, response, main_plot, sub_plot, sub_sub_plot, replication,
-                            verbose = TRUE) {
-  groups <- list(main = main_plot, sub = sub_plot, subsub = sub_sub_plot)
-  core <- .aridagri_spd_anova(data, response, replication, groups, 0.05)
-  if (verbose)
-    .aridagri_print_spd(core, "Split-Split-Plot Design")
-  result <- list(
-    design       = "Split-Split-Plot Design",
-    anova_table  = core$anova_table,
-    grand_mean   = core$grand_mean,
-    cv           = core$cv,
-    ms_error_a   = core$error_ms[["main"]],   df_error_a = core$error_df[["main"]],
-    ms_error_b   = core$error_ms[["sub"]],    df_error_b = core$error_df[["sub"]],
-    ms_error_c   = core$error_ms[["subsub"]], df_error_c = core$error_df[["subsub"]],
-    factor_means = core$factor_means,
-    comparisons  = core$comparisons,
-    model        = core$model
-  )
-  class(result) <- "aridagri_anova"
-  return(invisible(result))
-}
-
-
-# NOTE: anova_spd is defined in design_split_plot.R with full features
-
-
 #' Correlation Analysis with Significance
 #'
 #' @description
@@ -95,11 +42,16 @@ correlation_analysis <- function(data, method = "pearson", plot = TRUE, digits =
   p_matrix <- matrix(NA, n_vars, n_vars, dimnames = list(var_names, var_names))
   
   # Calculate correlations and p-values
+  method <- match.arg(method, c("pearson", "spearman", "kendall"))
   for (i in 1:n_vars) {
-    for (j in 1:n_vars) {
-      test <- cor.test(numeric_data[[i]], numeric_data[[j]], method = method)
-      cor_matrix[i, j] <- test$estimate
-      p_matrix[i, j] <- test$p.value
+    cor_matrix[i, i] <- 1
+    if (i == n_vars) break
+    for (j in (i + 1):n_vars) {
+      test <- suppressWarnings(stats::cor.test(numeric_data[[i]],
+                                               numeric_data[[j]],
+                                               method = method))
+      cor_matrix[i, j] <- cor_matrix[j, i] <- test$estimate
+      p_matrix[i, j] <- p_matrix[j, i] <- test$p.value
     }
   }
   
@@ -109,6 +61,7 @@ correlation_analysis <- function(data, method = "pearson", plot = TRUE, digits =
   sig_matrix[p_matrix >= 0.001 & p_matrix < 0.01] <- "**"
   sig_matrix[p_matrix >= 0.01 & p_matrix < 0.05] <- "*"
   sig_matrix[p_matrix >= 0.05 & p_matrix < 0.1] <- "."
+  sig_matrix[is.na(p_matrix)] <- ""
   
   # Print results
   if (verbose) {
@@ -220,15 +173,20 @@ pca_analysis <- function(data, scale = TRUE, ncp = 5, plot = TRUE,
     print(eigen_table)
 
     cat("\n--- Variable Loadings (First 3 PCs) ---\n\n")
-    print(round(loadings[, 1:min(3, ncol(loadings))], 3))
+    print(round(loadings[, 1:min(ncp, ncol(loadings)), drop = FALSE], 3))
   }
-  
-  # Kaiser criterion - components with eigenvalue > 1
-  n_retain <- sum(eigenvalues > 1)
+
+  # Kaiser criterion: eigenvalue > 1 for standardized data, above the mean
+  # eigenvalue otherwise
+  cut_ev <- if (scale) 1 else mean(eigenvalues)
+  n_retain <- sum(eigenvalues > cut_ev)
   if (verbose) {
     cat("\n--- Recommendation ---\n")
-    cat("Components with eigenvalue > 1:", n_retain, "\n")
-    cat("Variance explained by", n_retain, "components:", round(cum_var[n_retain], 1), "%\n")
+    cat("Components retained by the Kaiser criterion:", n_retain, "\n")
+    if (n_retain > 0) {
+      cat("Variance explained by", n_retain, "components:",
+          round(cum_var[n_retain], 1), "%\n")
+    }
   }
   
   # Plots
@@ -305,7 +263,10 @@ path_analysis <- function(data, dependent, independent, digits = 4,
   
   # Subset data
   vars <- c(dependent, independent)
-  analysis_data <- data[, vars]
+  if (length(independent) < 1) {
+    stop("Give at least one independent variable.", call. = FALSE)
+  }
+  analysis_data <- data[, vars, drop = FALSE]
   analysis_data <- na.omit(analysis_data)
   
   n <- nrow(analysis_data)
@@ -321,6 +282,11 @@ path_analysis <- function(data, dependent, independent, digits = 4,
   R_xx <- cor_matrix[independent, independent]
   
   # Path coefficients (direct effects) = inverse of R_xx multiplied by r_y
+  if (p > 1 && (any(!is.finite(R_xx)) || kappa(R_xx, exact = TRUE) > 1e10)) {
+    stop("The independent variables are perfectly or almost perfectly ",
+         "correlated (singular correlation matrix). Drop redundant ",
+         "variables and try again.", call. = FALSE)
+  }
   R_xx_inv <- solve(R_xx)
   path_coef <- R_xx_inv %*% r_y
   direct_effects <- as.vector(path_coef)

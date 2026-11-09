@@ -1,615 +1,632 @@
-#' ============================================================================
-#' COMPREHENSIVE EXPERIMENTAL DESIGN ANALYSIS FUNCTIONS
-#' Package: aridagri
-#' Author: Lalit Kumar Rolaniya
-#' ICAR-Indian Institute of Pulses Research, Regional Centre, Bikaner
-#' ============================================================================
+# =============================================================================
+# BASIC DESIGNS: CRD, RCBD AND COMBINED RCBD OVER ENVIRONMENTS
+# Package: aridagri
+# =============================================================================
+
+# Build the treatment means table shared by CRD and RCBD results.
+.means_table <- function(d, response, treatment, lsm, ph, methods) {
+  y <- d[[response]]
+  g <- d[[treatment]]
+  sdv <- tapply(y, g, stats::sd)
+  tab <- data.frame(Treatment = names(lsm$means),
+                    Mean = as.numeric(lsm$means),
+                    SD = as.numeric(sdv[names(lsm$means)]),
+                    N = as.numeric(lsm$n[names(lsm$means)]),
+                    SE = sqrt(pmax(diag(lsm$vcov), 0)),
+                    stringsAsFactors = FALSE)
+  first <- setdiff(methods, "dunnett")
+  if (length(first) > 0 && !is.null(ph[[first[1]]])) {
+    tab$Group <- ph[[first[1]]]$letters[tab$Treatment]
+  }
+  tab <- tab[order(-tab$Mean), , drop = FALSE]
+  rownames(tab) <- NULL
+  tab
+}
+
+# Name of the method whose letters appear in the means table.
+.letters_method <- function(methods) {
+  m <- setdiff(methods, "dunnett")
+  if (length(m) == 0) return(NA_character_)
+  switch(m[1], lsd = "Fisher's LSD", duncan = "Duncan's MRT",
+         tukey = "Tukey HSD", snk = "Student-Newman-Keuls",
+         scheffe = "Scheffe", bonferroni = "Bonferroni")
+}
 
 #' Completely Randomized Design (CRD) ANOVA
 #'
 #' @description
-#' Performs complete ANOVA for Completely Randomized Design with post-hoc tests,
-#' assumptions checking, and publication-ready output.
+#' Analysis of variance for a completely randomized design with standard
+#' errors, critical difference, coefficient of variation, post-hoc letter
+#' groupings and assumption checks. Unequal replication is handled
+#' exactly.
 #'
-#' @param data Data frame containing the experimental data
-#' @param response Name of the response variable (as string)
-#' @param treatment Name of treatment factor
-#' @param posthoc Post-hoc test: "lsd", "duncan", "tukey", "snk", "scheffe", or "all"
-#' @param alpha Significance level (default 0.05)
+#' @param data Data frame containing the experimental data.
+#' @param response Name of the response variable (character).
+#' @param treatment Name of the treatment column.
+#' @param posthoc Post-hoc test(s): \code{"lsd"}, \code{"duncan"},
+#'   \code{"tukey"}, \code{"snk"}, \code{"scheffe"}, \code{"bonferroni"},
+#'   \code{"dunnett"}, a vector of these, \code{"all"} or \code{"none"}.
+#'   The first method supplies the letters in the means table.
+#' @param alpha Significance level for the CD and the post-hoc tests
+#'   (default 0.05).
+#' @param verbose Logical. If TRUE (default), prints the report.
+#' @param control Control level for Dunnett's test (default: first level).
 #'
-#' @param verbose Logical. If TRUE (default), prints formatted output to console.
+#' @details
+#' SEm = sqrt(MSE / r), SEd = sqrt(2 MSE / r) and CD = t(alpha/2, error
+#' df) x SEd, where r is the number of replications (the harmonic mean
+#' when replication is unequal; the letters then use the exact SE of each
+#' pair). CV = 100 sqrt(MSE) / grand mean. Rows with a missing response
+#' are dropped with a message.
 #'
-#' @return List containing ANOVA table, means, post-hoc results, and diagnostics
+#' @return An object of class \code{aridagri_anova} with
+#'   \code{anova_table}, \code{model}, \code{grand_mean}, \code{cv},
+#'   \code{ms_error}, \code{df_error}, \code{se_mean} (SEm),
+#'   \code{se_diff} (SEd), \code{cd} (at \code{alpha}), \code{cd_5},
+#'   \code{cd_1}, \code{treatment_means} (mean, SD, N, SE and letters),
+#'   \code{posthoc}, \code{diagnostics}, \code{significance} and
+#'   \code{balanced}.
+#'
+#' @references
+#' Gomez, K.A. and Gomez, A.A. (1984). \emph{Statistical Procedures for
+#' Agricultural Research}, 2nd ed. John Wiley and Sons, New York.
 #'
 #' @examples
 #' data <- data.frame(
 #'   treatment = rep(c("T1", "T2", "T3", "T4"), each = 5),
-#'   yield = c(rnorm(5, 1200, 50), rnorm(5, 1350, 60), 
-#'             rnorm(5, 1100, 55), rnorm(5, 1450, 65))
+#'   yield = c(1210, 1185, 1242, 1198, 1225, 1340, 1362, 1318, 1375, 1350,
+#'             1105, 1090, 1122, 1131, 1098, 1445, 1462, 1430, 1471, 1452)
 #' )
-#' anova_crd(data, response = "yield", treatment = "treatment", posthoc = "all")
+#' res <- anova_crd(data, response = "yield", treatment = "treatment",
+#'                  posthoc = "duncan")
+#' res$treatment_means
 #'
 #' @export
 #' @author Lalit Kumar Rolaniya, ICAR-IIPR, Bikaner
 anova_crd <- function(data, response, treatment, posthoc = "lsd", alpha = 0.05,
-                            verbose = TRUE) {
-  
-  # Input validation
-  if (!response %in% names(data)) stop(paste("Response variable", response, "not found"))
-  if (!treatment %in% names(data)) stop(paste("Treatment variable", treatment, "not found"))
-  
-  # Convert to factor
-  data[[treatment]] <- as.factor(data[[treatment]])
-  
-  # Get dimensions
-  t <- nlevels(data[[treatment]])
-  N <- nrow(data)
-  
-  # Check for balanced design
-  trt_counts <- table(data[[treatment]])
-  if (length(unique(trt_counts)) > 1) {
-    warning("Unbalanced design detected: unequal replications across treatments (",
-            paste(names(trt_counts), "=", trt_counts, collapse = ", "),
-            "). Results assume balanced data and may be unreliable. ",
-            "Consider using lme4::lmer() for unbalanced data.", call. = FALSE)
+                      verbose = TRUE, control = NULL) {
+  .check_alpha(alpha)
+  methods <- .resolve_methods(posthoc)
+  d <- .prep_data(data, response, treatment, verbose)
+  trt <- d[[treatment]]
+  k <- nlevels(trt)
+  if (k < 2) stop("Need at least 2 treatments.", call. = FALSE)
+  n_i <- as.numeric(table(trt))
+  if (nrow(d) - k < 1) {
+    stop("No error degrees of freedom: the treatments need replication.",
+         call. = FALSE)
   }
-  
-  # Fit model
-  formula_crd <- as.formula(paste(response, "~", treatment))
-  model <- aov(formula_crd, data = data)
-  anova_table <- anova(model)
-  
-  # Extract values
-  SS_treatment <- anova_table$`Sum Sq`[1]
-  SS_error <- anova_table$`Sum Sq`[2]
-  SS_total <- SS_treatment + SS_error
-  
-  df_treatment <- anova_table$Df[1]
-  df_error <- anova_table$Df[2]
-  df_total <- df_treatment + df_error
-  
-  MS_treatment <- anova_table$`Mean Sq`[1]
-  MS_error <- anova_table$`Mean Sq`[2]
-  
-  F_value <- anova_table$`F value`[1]
-  p_value <- anova_table$`Pr(>F)`[1]
-  
-  # Calculate statistics
-  grand_mean <- mean(data[[response]], na.rm = TRUE)
-  cv <- sqrt(MS_error) / grand_mean * 100
-  se_mean <- sqrt(MS_error / (N / t))
-  cd_5 <- qt(0.975, df_error) * sqrt(2 * MS_error / (N / t))
-  cd_1 <- qt(0.995, df_error) * sqrt(2 * MS_error / (N / t))
-  
-  # Print ANOVA table
-  if (verbose) {
-    cat("\n")
-    cat("\n")
-    cat("         COMPLETELY RANDOMIZED DESIGN (CRD) - ANOVA                   \n")
-    cat("\n")
-    cat(" Response Variable:", sprintf("%-50s", response), "\n")
-    cat(" Treatment Factor:", sprintf("%-51s", treatment), "\n")
-    cat(" Number of Treatments:", sprintf("%-47d", t), "\n")
-    cat(" Total Observations:", sprintf("%-49d", N), "\n")
-    cat("\n")
-
-    cat("\n\n")
-    cat("                        ANALYSIS OF VARIANCE                          \n")
-    cat("\n")
-    cat(" Source             df        SS           MS         F    Pr>F  \n")
-    cat("\n")
-    cat(sprintf(" Treatment        %6d  %11.2f  %11.2f  %5.2f  %5.4f\n",
-                df_treatment, SS_treatment, MS_treatment, F_value, p_value))
-    cat(sprintf(" Error            %6d  %11.2f  %11.2f               \n",
-                df_error, SS_error, MS_error))
-    cat("\n")
-    cat(sprintf(" Total            %6d  %11.2f                            \n",
-                df_total, SS_total))
-    cat("\n")
-  }
-  
-  # Significance
-  sig <- ifelse(p_value < 0.001, "***", ifelse(p_value < 0.01, "**", 
-         ifelse(p_value < 0.05, "*", "NS")))
-  
-  if (verbose) {
-    cat("\n\n")
-    cat("                        SUMMARY STATISTICS                            \n")
-    cat("\n")
-    cat(sprintf(" Grand Mean          : %10.2f                                     \n", grand_mean))
-    cat(sprintf(" CV (%%)              : %10.2f                                     \n", cv))
-    cat(sprintf(" SE(m)               : %10.3f                                     \n", se_mean))
-    cat(sprintf(" CD (5%%)             : %10.3f                                     \n", cd_5))
-    cat(sprintf(" CD (1%%)             : %10.3f                                     \n", cd_1))
-    cat(sprintf(" Significance        : %10s                                     \n", sig))
-    cat("\n")
-  }
-  
-  # Treatment means
-  means <- aggregate(data[[response]], by = list(data[[treatment]]), 
-                     FUN = function(x) c(mean = mean(x, na.rm = TRUE), 
-                                         sd = sd(x, na.rm = TRUE),
-                                         n = length(x)))
-  means_df <- data.frame(
-    Treatment = means$Group.1,
-    Mean = means$x[, "mean"],
-    SD = means$x[, "sd"],
-    N = means$x[, "n"]
-  )
-  means_df <- means_df[order(-means_df$Mean), ]
-  
-  if (verbose) {
-    cat("\n\n")
-    cat("                        TREATMENT MEANS                               \n")
-    cat("\n")
-    cat(" Treatment           Mean          SD            N         Rank   \n")
-    cat("\n")
-    for (i in 1:nrow(means_df)) {
-      cat(sprintf(" %-15s  %11.2f  %11.2f  %11.0f  %8d \n",
-                  as.character(means_df$Treatment[i]), means_df$Mean[i], 
-                  means_df$SD[i], means_df$N[i], i))
-    }
-    cat("\n")
-  }
-  
-  # Post-hoc tests
-  posthoc_results <- perform_posthoc(model, data, response, treatment, 
-                                      MS_error, df_error, posthoc, alpha,
-                                      verbose = verbose)
-  
-  # Model diagnostics
-  diagnostics <- check_assumptions(model, verbose = verbose)
-  
-  # Return results
+  model <- stats::aov(.formula(response, .bq(treatment)), data = d)
+  anova_table <- .clean_rownames(stats::anova(model))
+  ms_e <- anova_table[["Mean Sq"]][2]
+  df_e <- anova_table[["Df"]][2]
+  p_trt <- anova_table[["Pr(>F)"]][1]
+  balanced <- length(unique(n_i)) == 1
+  r_h <- 1 / mean(1 / n_i)
+  gm <- mean(d[[response]])
+  sem <- sqrt(ms_e / r_h)
+  sed <- sqrt(2) * sem
+  lsm <- .ls_means_model(model, treatment)
+  ph <- .posthoc_set(model, treatment, methods, alpha, control = control,
+                     response = response, lsm = lsm)
+  means_df <- .means_table(d, response, treatment, lsm, ph, methods)
+  diagnostics <- check_assumptions(model, factor = treatment, verbose = FALSE)
   result <- list(
     design = "CRD",
+    response = response,
+    factors = c(treatment = treatment),
     anova_table = anova_table,
     model = model,
-    grand_mean = grand_mean,
-    cv = cv,
-    se_mean = se_mean,
-    cd_5 = cd_5,
-    cd_1 = cd_1,
+    grand_mean = gm,
+    cv = 100 * sqrt(ms_e) / gm,
+    ms_error = ms_e,
+    df_error = df_e,
+    se_mean = sem,
+    se_diff = sed,
+    cd = stats::qt(1 - alpha / 2, df_e) * sed,
+    cd_5 = stats::qt(0.975, df_e) * sed,
+    cd_1 = stats::qt(0.995, df_e) * sed,
+    alpha = alpha,
     treatment_means = means_df,
-    posthoc = posthoc_results,
+    letters_method = .letters_method(methods),
+    posthoc = ph,
     diagnostics = diagnostics,
-    significance = sig
+    significance = .sig_code(p_trt),
+    balanced = balanced,
+    replications = stats::setNames(n_i, levels(trt))
   )
-  
   class(result) <- c("aridagri_anova", "list")
-  return(invisible(result))
+  if (verbose) print(result)
+  invisible(result)
 }
 
 
-#' Randomized Block Design (RBD) ANOVA
+#' Randomized Complete Block Design (RCBD) ANOVA
 #'
 #' @description
-#' Performs complete ANOVA for Randomized Block Design (RCBD) with post-hoc tests,
-#' assumptions checking, and publication-ready output.
+#' Analysis of variance for a randomized complete block design with
+#' standard errors, critical difference, CV, relative efficiency over a
+#' CRD, post-hoc letter groupings and assumption checks. Missing plots are
+#' handled by least squares: treatments are tested after blocks, means are
+#' least-squares (adjusted) means and every pair is compared with its own
+#' standard error.
 #'
-#' @param data Data frame containing the experimental data
-#' @param response Name of the response variable
-#' @param treatment Name of treatment factor
-#' @param block Name of block/replication factor
-#' @param posthoc Post-hoc test: "lsd", "duncan", "tukey", "snk", "scheffe", or "all"
-#' @param alpha Significance level (default 0.05)
+#' @inheritParams anova_crd
+#' @param block Name of the block (replication) column.
 #'
-#' @param verbose Logical. If TRUE (default), prints formatted output to console.
+#' @details
+#' Relative efficiency of the RCBD over a CRD follows Gomez and Gomez
+#' (1984): \deqn{RE = \frac{(r - 1) E_b + r (t - 1) E_e}{(r t - 1) E_e}}
+#' where \eqn{E_b} and \eqn{E_e} are the block and error mean squares,
+#' multiplied by the precision adjustment factor
+#' \eqn{k = \frac{[(r-1)(t-1)+1][t(r-1)+3]}{[(r-1)(t-1)+3][t(r-1)+1]}}
+#' when the error degrees of freedom are below 20. Values above 100\% mean
+#' that blocking reduced the error.
 #'
-#' @return List containing ANOVA table, means, post-hoc results
+#' @return An object of class \code{aridagri_anova}. In addition to the
+#'   components described in \code{\link{anova_crd}} it contains
+#'   \code{relative_efficiency} (percent, adjusted),
+#'   \code{relative_efficiency_unadjusted} and \code{missing_plots}.
+#'
+#' @references
+#' Gomez, K.A. and Gomez, A.A. (1984). \emph{Statistical Procedures for
+#' Agricultural Research}, 2nd ed. John Wiley and Sons, New York.
 #'
 #' @examples
-#' data <- data.frame(
-#'   rep = rep(1:4, each = 5),
-#'   treatment = rep(c("T1", "T2", "T3", "T4", "T5"), 4),
-#'   yield = c(rnorm(5, 1200, 50), rnorm(5, 1250, 55),
-#'             rnorm(5, 1180, 45), rnorm(5, 1270, 60))
-#' )
-#' anova_rbd(data, response = "yield", treatment = "treatment", 
-#'           block = "rep", posthoc = "duncan")
+#' data(mothbean_rbd)
+#' res <- anova_rbd(mothbean_rbd, response = "seed_yield",
+#'                  treatment = "treatment", block = "block",
+#'                  posthoc = "duncan")
+#' res$treatment_means
+#' res$relative_efficiency
 #'
 #' @export
 #' @author Lalit Kumar Rolaniya, ICAR-IIPR, Bikaner
-anova_rbd <- function(data, response, treatment, block, posthoc = "lsd", alpha = 0.05,
-                            verbose = TRUE) {
-  
-  # Input validation
-  if (!response %in% names(data)) stop(paste("Response variable", response, "not found"))
-  if (!treatment %in% names(data)) stop(paste("Treatment variable", treatment, "not found"))
-  if (!block %in% names(data)) stop(paste("Block variable", block, "not found"))
-  
-  # Convert to factors
-  data[[treatment]] <- as.factor(data[[treatment]])
-  data[[block]] <- as.factor(data[[block]])
-  
-  # Get dimensions
-  t <- nlevels(data[[treatment]])
-  r <- nlevels(data[[block]])
-  N <- nrow(data)
-  
-  # Check for balanced design
-  if (N != t * r) {
-    warning("Unbalanced design detected: expected ", t * r, " observations (", 
-            t, " treatments x ", r, " blocks) but found ", N, ". ",
-            "Results assume balanced data and may be unreliable. ",
-            "Consider using lme4::lmer() for unbalanced data.", call. = FALSE)
+anova_rbd <- function(data, response, treatment, block, posthoc = "lsd",
+                      alpha = 0.05, verbose = TRUE, control = NULL) {
+  .check_alpha(alpha)
+  methods <- .resolve_methods(posthoc)
+  d <- .prep_data(data, response, c(treatment, block), verbose)
+  trt <- d[[treatment]]
+  blk <- d[[block]]
+  k <- nlevels(trt)
+  r <- nlevels(blk)
+  if (k < 2) stop("Need at least 2 treatments.", call. = FALSE)
+  if (r < 2) stop("Need at least 2 blocks.", call. = FALSE)
+  cell <- table(blk, trt)
+  if (any(colSums(cell) == 0)) {
+    stop("Some treatments have no observations.", call. = FALSE)
   }
-  
-  # Fit model
-  formula_rbd <- as.formula(paste(response, "~", block, "+", treatment))
-  model <- aov(formula_rbd, data = data)
-  anova_table <- anova(model)
-  
-  # Extract values
-  SS_block <- anova_table$`Sum Sq`[1]
-  SS_treatment <- anova_table$`Sum Sq`[2]
-  SS_error <- anova_table$`Sum Sq`[3]
-  SS_total <- SS_block + SS_treatment + SS_error
-  
-  df_block <- anova_table$Df[1]
-  df_treatment <- anova_table$Df[2]
-  df_error <- anova_table$Df[3]
-  df_total <- df_block + df_treatment + df_error
-  
-  MS_block <- anova_table$`Mean Sq`[1]
-  MS_treatment <- anova_table$`Mean Sq`[2]
-  MS_error <- anova_table$`Mean Sq`[3]
-  
-  F_block <- anova_table$`F value`[1]
-  F_treatment <- anova_table$`F value`[2]
-  p_block <- anova_table$`Pr(>F)`[1]
-  p_treatment <- anova_table$`Pr(>F)`[2]
-  
-  # Calculate statistics
-  grand_mean <- mean(data[[response]], na.rm = TRUE)
-  cv <- sqrt(MS_error) / grand_mean * 100
-  se_mean <- sqrt(MS_error / r)
-  cd_5 <- qt(0.975, df_error) * sqrt(2 * MS_error / r)
-  cd_1 <- qt(0.995, df_error) * sqrt(2 * MS_error / r)
-  
-  # Relative efficiency of RBD over CRD
-  MS_block_adj <- max(MS_block, MS_error)
-  re_crd <- ((df_block * MS_block_adj + (df_treatment + df_block) * MS_error) /
-              ((df_block + df_treatment + df_error) * MS_error)) * 100
-  
-  # Print ANOVA table
-  if (verbose) {
-    cat("\n")
-    cat("\n")
-    cat("       RANDOMIZED BLOCK DESIGN (RBD/RCBD) - ANOVA                     \n")
-    cat("\n")
-    cat(" Response Variable:", sprintf("%-50s", response), "\n")
-    cat(" Treatment Factor:", sprintf("%-51s", treatment), "\n")
-    cat(" Block Factor:", sprintf("%-55s", block), "\n")
-    cat(" Number of Treatments:", sprintf("%-47d", t), "\n")
-    cat(" Number of Blocks:", sprintf("%-51d", r), "\n")
-    cat(" Total Observations:", sprintf("%-49d", N), "\n")
-    cat("\n")
-
-    cat("\n\n")
-    cat("                        ANALYSIS OF VARIANCE                          \n")
-    cat("\n")
-    cat(" Source             df        SS           MS         F    Pr>F  \n")
-    cat("\n")
-    cat(sprintf(" Block            %6d  %11.2f  %11.2f  %5.2f  %5.4f\n",
-                df_block, SS_block, MS_block, F_block, p_block))
-    cat(sprintf(" Treatment        %6d  %11.2f  %11.2f  %5.2f  %5.4f\n",
-                df_treatment, SS_treatment, MS_treatment, F_treatment, p_treatment))
-    cat(sprintf(" Error            %6d  %11.2f  %11.2f               \n",
-                df_error, SS_error, MS_error))
-    cat("\n")
-    cat(sprintf(" Total            %6d  %11.2f                            \n",
-                df_total, SS_total))
-    cat("\n")
-  }
-  
-  # Significance
-  sig <- ifelse(p_treatment < 0.001, "***", ifelse(p_treatment < 0.01, "**", 
-         ifelse(p_treatment < 0.05, "*", "NS")))
-  
-  if (verbose) {
-    cat("\n\n")
-    cat("                        SUMMARY STATISTICS                            \n")
-    cat("\n")
-    cat(sprintf(" Grand Mean                    : %10.2f                         \n", grand_mean))
-    cat(sprintf(" CV (%%)                        : %10.2f                         \n", cv))
-    cat(sprintf(" SE(m)                         : %10.3f                         \n", se_mean))
-    cat(sprintf(" SE(d)                         : %10.3f                         \n", se_mean * sqrt(2)))
-    cat(sprintf(" CD (5%%)                       : %10.3f                         \n", cd_5))
-    cat(sprintf(" CD (1%%)                       : %10.3f                         \n", cd_1))
-    cat(sprintf(" Treatment Significance        : %10s                         \n", sig))
-    cat(sprintf(" Relative Efficiency over CRD  : %10.1f%%                        \n", re_crd))
-    cat("\n")
-  }
-  
-  # Treatment means
-  means <- aggregate(data[[response]], by = list(data[[treatment]]), 
-                     FUN = function(x) c(mean = mean(x, na.rm = TRUE), 
-                                         sd = sd(x, na.rm = TRUE),
-                                         n = length(x)))
-  means_df <- data.frame(
-    Treatment = means$Group.1,
-    Mean = means$x[, "mean"],
-    SD = means$x[, "sd"],
-    N = means$x[, "n"]
-  )
-  means_df <- means_df[order(-means_df$Mean), ]
-  
-  if (verbose) {
-    cat("\n\n")
-    cat("                        TREATMENT MEANS                               \n")
-    cat("\n")
-    cat(" Treatment           Mean          SD            N         Rank   \n")
-    cat("\n")
-    for (i in 1:nrow(means_df)) {
-      cat(sprintf(" %-15s  %11.2f  %11.2f  %11.0f  %8d \n",
-                  as.character(means_df$Treatment[i]), means_df$Mean[i], 
-                  means_df$SD[i], means_df$N[i], i))
+  balanced <- all(cell == 1)
+  missing_plots <- sum(cell == 0)
+  if (!balanced && verbose) {
+    if (missing_plots > 0) {
+      message(missing_plots, " missing plot(s): treatments are tested after ",
+              "blocks and means are least-squares means.")
     }
-    cat("\n")
+    if (any(cell > 1)) {
+      message("Some treatments occur more than once in a block; the error ",
+              "term includes block x treatment variation.")
+    }
   }
-  
-  # Post-hoc tests
-  posthoc_results <- perform_posthoc(model, data, response, treatment, 
-                                      MS_error, df_error, posthoc, alpha,
-                                      verbose = verbose)
-  
-  # Return results
+  model <- stats::aov(.formula(response, paste(.bq(block), "+",
+                                               .bq(treatment))), data = d)
+  anova_table <- .clean_rownames(stats::anova(model))
+  if (anova_table[["Df"]][3] < 1) {
+    stop("No error degrees of freedom left.", call. = FALSE)
+  }
+  ms_b <- anova_table[["Mean Sq"]][1]
+  ms_e <- anova_table[["Mean Sq"]][3]
+  df_e <- anova_table[["Df"]][3]
+  p_trt <- anova_table[["Pr(>F)"]][2]
+  n_i <- colSums(cell)
+  r_h <- 1 / mean(1 / n_i)
+  gm <- mean(d[[response]])
+  sem <- sqrt(ms_e / r_h)
+  sed <- sqrt(2) * sem
+  re_raw <- NA_real_
+  re_adj <- NA_real_
+  if (balanced) {
+    re_raw <- 100 * ((r - 1) * ms_b + r * (k - 1) * ms_e) /
+      ((r * k - 1) * ms_e)
+    adj <- if (df_e < 20) {
+      (((r - 1) * (k - 1) + 1) * (k * (r - 1) + 3)) /
+        (((r - 1) * (k - 1) + 3) * (k * (r - 1) + 1))
+    } else 1
+    re_adj <- re_raw * adj
+  }
+  lsm <- .ls_means_model(model, treatment)
+  ph <- .posthoc_set(model, treatment, methods, alpha, control = control,
+                     response = response, lsm = lsm)
+  means_df <- .means_table(d, response, treatment, lsm, ph, methods)
+  diagnostics <- check_assumptions(model, factor = treatment, verbose = FALSE)
   result <- list(
     design = "RBD",
+    response = response,
+    factors = c(treatment = treatment, block = block),
     anova_table = anova_table,
     model = model,
-    grand_mean = grand_mean,
-    cv = cv,
-    se_mean = se_mean,
-    se_diff = se_mean * sqrt(2),
-    cd_5 = cd_5,
-    cd_1 = cd_1,
-    relative_efficiency = re_crd,
+    grand_mean = gm,
+    cv = 100 * sqrt(ms_e) / gm,
+    ms_error = ms_e,
+    df_error = df_e,
+    se_mean = sem,
+    se_diff = sed,
+    cd = stats::qt(1 - alpha / 2, df_e) * sed,
+    cd_5 = stats::qt(0.975, df_e) * sed,
+    cd_1 = stats::qt(0.995, df_e) * sed,
+    alpha = alpha,
+    relative_efficiency = re_adj,
+    relative_efficiency_unadjusted = re_raw,
     treatment_means = means_df,
-    posthoc = posthoc_results,
-    significance = sig
+    letters_method = .letters_method(methods),
+    posthoc = ph,
+    diagnostics = diagnostics,
+    significance = .sig_code(p_trt),
+    balanced = balanced,
+    missing_plots = missing_plots,
+    replications = n_i
   )
-  
   class(result) <- c("aridagri_anova", "list")
-  return(invisible(result))
+  if (verbose) print(result)
+  invisible(result)
 }
 
 
-#' Pooled Analysis of RBD Experiments (Multi-Environment/Year)
+#' Print Method for CRD and RCBD Results
+#'
+#' @param x An object of class \code{aridagri_anova}.
+#' @param digits Number of decimal places for means. Default 2.
+#' @param ... Unused.
+#'
+#' @return Invisibly returns \code{x}. Called for its side effect of
+#'   printing the ANOVA report.
+#'
+#' @export
+print.aridagri_anova <- function(x, digits = 2, ...) {
+  if (!is.null(x$design) && x$design %in% c("CRD", "RBD")) {
+    .print_crd_rbd(x, digits)
+  } else {
+    .print_generic_anova(x, digits)
+  }
+  invisible(x)
+}
+
+.print_crd_rbd <- function(x, digits) {
+  f <- x$factors
+  title <- if (x$design == "CRD") "COMPLETELY RANDOMIZED DESIGN (CRD)" else
+    "RANDOMIZED COMPLETE BLOCK DESIGN (RCBD)"
+  info <- c(Response = x$response, Treatment = f[["treatment"]],
+            Treatments = length(x$replications))
+  if (x$design == "RBD") {
+    info <- c(info, Blocks = nlevels(stats::model.frame(x$model)[[f[["block"]]]]))
+  }
+  info <- c(info, Observations = sum(x$replications))
+  .print_info(title, info)
+  tab <- x$anova_table
+  labs <- if (x$design == "CRD") c("Treatment", "Error") else
+    c("Block", "Treatment", "Error")
+  .print_anova_df(tab, labs)
+  st <- c(`Grand mean` = x$grand_mean, `CV (%)` = x$cv,
+          SEm = x$se_mean, SEd = x$se_diff)
+  st[[sprintf("CD (%g%%)", 100 * x$alpha)]] <- x$cd
+  .print_stats_line(st, 3)
+  if (!isTRUE(x$balanced)) {
+    cat(" (SEm, SEd and CD use the harmonic mean replication; letters use",
+        "the exact SE of each pair.)\n")
+  }
+  if (x$design == "RBD" && !is.na(x$relative_efficiency)) {
+    cat(sprintf(" Relative efficiency of RCBD over CRD = %.1f%%\n",
+                x$relative_efficiency))
+  }
+  ttl <- if (is.na(x$letters_method)) "Treatment means" else
+    sprintf("Treatment means (%s, alpha = %g)", x$letters_method, x$alpha)
+  .print_means(x$treatment_means, ttl, digits)
+  p_trt <- x$anova_table[["Pr(>F)"]][if (x$design == "CRD") 1 else 2]
+  if (!is.na(x$letters_method)) {
+    cat(" Means sharing a letter do not differ significantly.\n")
+    if (!is.na(p_trt) && p_trt >= x$alpha) {
+      cat(" Note: the treatment F-test is not significant, so pairwise",
+          "differences\n should not be interpreted.\n")
+    }
+  }
+  if (!is.null(x$posthoc$dunnett)) .print_posthoc(x$posthoc["dunnett"], digits)
+  invisible(NULL)
+}
+
+# Fallback printer for result lists that carry an ANOVA table.
+.print_generic_anova <- function(x, digits) {
+  .heading(if (!is.null(x$design)) toupper(x$design) else "ANOVA")
+  if (!is.null(x$anova_table)) {
+    print(.add_sig(.round_anova(x$anova_table)))
+  }
+  if (!is.null(x$grand_mean)) {
+    cat(sprintf("\n Grand mean = %.3f\n", x$grand_mean))
+  }
+  if (!is.null(x$cv)) {
+    cv <- x$cv
+    cat(" CV (%):", paste(names(cv), round(cv, 2), sep = " ", collapse = "; "),
+        "\n")
+  }
+  invisible(NULL)
+}
+
+
+#' Combined (Pooled) Analysis of RCBD Experiments over Environments
 #'
 #' @description
-#' Performs pooled ANOVA for RBD experiments conducted across multiple 
-#' environments, years, or locations. Tests homogeneity of error variances
-#' using Bartlett's test before pooling.
+#' Combined analysis of variance for the same set of treatments tested in a
+#' randomized complete block design in several environments (years,
+#' seasons or locations). Gives the analysis of each environment,
+#' Bartlett's test of homogeneity of error variances, the combined ANOVA
+#' with the correct error term for every source, SE and CD for treatment,
+#' environment and interaction means, and letter groupings for the
+#' treatment means.
 #'
-#' @param data Data frame containing combined data from all environments
-#' @param response Name of the response variable
-#' @param treatment Name of treatment factor
-#' @param environment Name of environment/year/location factor
-#' @param block Name of block factor (nested within environment)
-#' @param posthoc Post-hoc test method
-#' @param alpha Significance level
+#' @inheritParams anova_crd
+#' @param environment Name of the environment (year, season or location)
+#'   column.
+#' @param block Name of the block column (blocks are nested within
+#'   environments; labels may repeat across environments).
+#' @param env_effect Either \code{"fixed"} (default; years or seasons of
+#'   interest) or \code{"random"} (locations or years treated as a sample).
 #'
-#' @param verbose Logical. If TRUE (default), prints formatted output to console.
+#' @details
+#' Sources and their F-tests (McIntosh, 1983; Gomez and Gomez, 1984):
+#' environment is tested against blocks within environments; the
+#' treatment x environment interaction against the pooled error; the
+#' treatment effect against the pooled error when environments are fixed
+#' and against the treatment x environment mean square when they are
+#' random. With random environments the usual restricted mixed model is
+#' assumed, so environment is still tested against blocks within
+#' environments. The SE and CD of treatment means use the same denominator
+#' as the treatment F-test. Bartlett's chi-square tests whether the error
+#' variances of the environments can be pooled; when it is significant,
+#' interpret the combined analysis with care.
 #'
-#' @return List containing pooled ANOVA, individual ANOVAs, and interaction analysis
+#' @return An object of class \code{aridagri_pooled} with
+#'   \code{pooled_anova} (combined ANOVA with correct F-tests),
+#'   \code{individual_anovas}, \code{environment_summary} (mean, MSE, CV,
+#'   F, p and CD of each environment), \code{bartlett_test},
+#'   \code{treatment_means} (with letters), \code{interaction_means},
+#'   \code{se_treatment}, \code{cd_treatment}, \code{se_environment},
+#'   \code{cd_environment}, \code{se_interaction}, \code{cd_interaction},
+#'   \code{posthoc}, \code{cv}, \code{grand_mean}, \code{mse_values} and
+#'   \code{model}.
+#'
+#' @references
+#' McIntosh, M.S. (1983). Analysis of combined experiments.
+#' \emph{Agronomy Journal}, 75(1), 153-155.
+#' \doi{10.2134/agronj1983.00021962007500010041x}
+#'
+#' Gomez, K.A. and Gomez, A.A. (1984). \emph{Statistical Procedures for
+#' Agricultural Research}, 2nd ed. John Wiley and Sons, New York.
 #'
 #' @examples
-#' # Data from 3 years
-#' data <- data.frame(
-#'   year = rep(c("Y1", "Y2", "Y3"), each = 20),
-#'   rep = rep(rep(1:4, each = 5), 3),
-#'   treatment = rep(c("T1", "T2", "T3", "T4", "T5"), 12),
-#'   yield = rnorm(60, 1200, 150)
-#' )
-#' anova_rbd_pooled(data, response = "yield", treatment = "treatment",
-#'                  environment = "year", block = "rep")
+#' data(pearlmillet_met)
+#' res <- anova_rbd_pooled(pearlmillet_met, response = "grain_yield",
+#'                         treatment = "genotype", environment = "environment",
+#'                         block = "rep", verbose = FALSE)
+#' res$pooled_anova
+#' res$bartlett_test
 #'
 #' @export
 #' @author Lalit Kumar Rolaniya, ICAR-IIPR, Bikaner
-anova_rbd_pooled <- function(data, response, treatment, environment, block, 
-                              posthoc = "lsd", alpha = 0.05,
-                            verbose = TRUE) {
-  
-  # Convert to factors
-  data[[treatment]] <- as.factor(data[[treatment]])
-  data[[environment]] <- as.factor(data[[environment]])
-  data[[block]] <- as.factor(data[[block]])
-  
-  # Get dimensions
-  t <- nlevels(data[[treatment]])
-  e <- nlevels(data[[environment]])
-  r <- nlevels(data[[block]])
-  N <- nrow(data)
-  
-  # Check for balanced design
-  if (N != t * e * r) {
-    warning("Unbalanced design detected: expected ", t * e * r, " observations (", 
-            t, " treatments x ", e, " environments x ", r, " blocks) but found ", N, ". ",
-            "Results assume balanced data and may be unreliable. ",
-            "Consider using lme4::lmer() for unbalanced data.", call. = FALSE)
+anova_rbd_pooled <- function(data, response, treatment, environment, block,
+                             posthoc = "lsd", alpha = 0.05, verbose = TRUE,
+                             env_effect = c("fixed", "random"),
+                             control = NULL) {
+  .check_alpha(alpha)
+  env_effect <- match.arg(env_effect)
+  methods <- setdiff(.resolve_methods(posthoc), "dunnett")
+  d <- .prep_data(data, response, c(treatment, environment, block), verbose)
+  trt <- d[[treatment]]
+  env <- d[[environment]]
+  k <- nlevels(trt)
+  e <- nlevels(env)
+  if (k < 2) stop("Need at least 2 treatments.", call. = FALSE)
+  if (e < 2) stop("Need at least 2 environments.", call. = FALSE)
+  d$.blk <- interaction(env, d[[block]], drop = TRUE, sep = ":")
+  r_env <- tapply(d$.blk, env, function(b) length(unique(b)))
+  if (any(r_env < 2)) {
+    stop("Every environment needs at least 2 blocks.", call. = FALSE)
   }
-  
-  # Individual ANOVAs for each environment
-  env_levels <- levels(data[[environment]])
-  individual_anovas <- list()
-  mse_values <- numeric(e)
-  df_error_values <- numeric(e)
-  
-  if (verbose) {
-    cat("\n")
-    cat("\n")
-    cat("              POOLED RBD ANALYSIS (Multi-Environment)                 \n")
-    cat("\n")
-    cat(" Response Variable:", sprintf("%-50s", response), "\n")
-    cat(" Treatment Factor:", sprintf("%-51s", treatment), "\n")
-    cat(" Environment Factor:", sprintf("%-49s", environment), "\n")
-    cat(" Block Factor:", sprintf("%-55s", block), "\n")
-    cat(" Number of Treatments:", sprintf("%-47d", t), "\n")
-    cat(" Number of Environments:", sprintf("%-45d", e), "\n")
-    cat(" Replications per Environment:", sprintf("%-39d", r), "\n")
-    cat(" Total Observations:", sprintf("%-49d", N), "\n")
-    cat("\n")
+  balanced <- all(table(d$.blk, trt) == 1) && length(unique(r_env)) == 1
+  if (!balanced) {
+    warning("The data are not balanced (every treatment once in every block ",
+            "of every environment). The combined ANOVA uses sequential sums ",
+            "of squares and is approximate.", call. = FALSE)
+  }
+  r <- as.numeric(stats::median(r_env))
+  y <- d[[response]]
 
-    cat("\n\n")
-    cat("              INDIVIDUAL ENVIRONMENT ANALYSES                         \n")
-    cat("\n")
+  # Analysis of each environment
+  env_levels <- levels(env)
+  individual <- list()
+  summ <- vector("list", e)
+  for (i in seq_len(e)) {
+    di <- d[env == env_levels[i], , drop = FALSE]
+    di$.blk <- droplevels(di$.blk)
+    di[[treatment]] <- droplevels(di[[treatment]])
+    fi <- stats::aov(.formula(response, paste(".blk +", .bq(treatment))),
+                     data = di)
+    ai <- stats::anova(fi)
+    rownames(ai) <- c(block, treatment, "Residuals")
+    individual[[env_levels[i]]] <- ai
+    mi <- mean(di[[response]])
+    sed_i <- sqrt(2 * ai[["Mean Sq"]][3] / r_env[[i]])
+    summ[[i]] <- data.frame(
+      Environment = env_levels[i], Mean = mi, MSE = ai[["Mean Sq"]][3],
+      df_error = ai[["Df"]][3], CV = 100 * sqrt(ai[["Mean Sq"]][3]) / mi,
+      F_value = ai[["F value"]][2], p_value = ai[["Pr(>F)"]][2],
+      Sig = .sig_code(ai[["Pr(>F)"]][2]),
+      CD = stats::qt(1 - alpha / 2, ai[["Df"]][3]) * sed_i,
+      stringsAsFactors = FALSE)
+  }
+  env_summary <- do.call(rbind, summ)
+  mse_values <- env_summary$MSE
+  df_values <- env_summary$df_error
 
-    for (i in 1:e) {
-      env_data <- data[data[[environment]] == env_levels[i], ]
-      formula_rbd <- as.formula(paste(response, "~", block, "+", treatment))
-      model_i <- aov(formula_rbd, data = env_data)
-      anova_i <- anova(model_i)
+  # Bartlett's test of homogeneity of error variances
+  s2p <- sum(df_values * mse_values) / sum(df_values)
+  chi <- (sum(df_values) * log(s2p) - sum(df_values * log(mse_values))) /
+    (1 + (sum(1 / df_values) - 1 / sum(df_values)) / (3 * (e - 1)))
+  p_bart <- stats::pchisq(chi, e - 1, lower.tail = FALSE)
+  bartlett <- list(chi_sq = chi, df = e - 1, p_value = p_bart,
+                   variance_ratio = max(mse_values) / min(mse_values),
+                   homogeneous = p_bart >= 0.05)
 
-      individual_anovas[[env_levels[i]]] <- anova_i
-      mse_values[i] <- anova_i$`Mean Sq`[3]
-      df_error_values[i] <- anova_i$Df[3]
+  # Combined analysis
+  rhs <- paste(.bq(environment), "+ .blk +", .bq(treatment), "+",
+               paste0(.bq(environment), ":", .bq(treatment)))
+  model <- stats::aov(.formula(response, rhs), data = d)
+  at <- stats::anova(model)
+  ss <- at[["Sum Sq"]]
+  dfv <- at[["Df"]]
+  ms <- at[["Mean Sq"]]
+  # rows: env, blocks(env), trt, env:trt, residuals
+  den <- if (env_effect == "fixed") c(2, 5, 5, 5) else c(2, 5, 4, 5)
+  num <- c(1, 2, 3, 4)
+  fv <- ms[num] / ms[den]
+  pv <- stats::pf(fv, dfv[num], dfv[den], lower.tail = FALSE)
+  pooled <- data.frame(Df = dfv, `Sum Sq` = ss, `Mean Sq` = ms,
+                       `F value` = c(fv, NA), `Pr(>F)` = c(pv, NA),
+                       check.names = FALSE)
+  rownames(pooled) <- c(environment, paste0(block, "(", environment, ")"),
+                        treatment, paste0(environment, ":", treatment),
+                        "Residuals")
+  ms_e <- ms[5]
+  df_e <- dfv[5]
+  ms_te <- ms[4]
+  df_te <- dfv[4]
+  ms_re <- ms[2]
+  df_re <- dfv[2]
+  gm <- mean(y)
 
-      mean_i <- mean(env_data[[response]], na.rm = TRUE)
-      cv_i <- sqrt(mse_values[i]) / mean_i * 100
+  ms_t <- if (env_effect == "fixed") ms_e else ms_te
+  df_t <- if (env_effect == "fixed") df_e else df_te
+  se_t <- sqrt(ms_t / (e * r))
+  cd_t <- stats::qt(1 - alpha / 2, df_t) * sqrt(2) * se_t
+  se_env <- sqrt(ms_re / (k * r))
+  cd_env <- stats::qt(1 - alpha / 2, df_re) * sqrt(2) * se_env
+  se_int <- sqrt(ms_e / r)
+  cd_int <- stats::qt(1 - alpha / 2, df_e) * sqrt(2) * se_int
 
-      cat(sprintf("\n--- %s ---\n", env_levels[i]))
-      cat(sprintf("Mean: %.2f | MSE: %.2f | CV: %.2f%%\n", mean_i, mse_values[i], cv_i))
+  tm <- tapply(y, trt, mean)
+  ph <- list()
+  if (length(methods) > 0) {
+    V <- diag(se_t^2, k)
+    dimnames(V) <- list(names(tm), names(tm))
+    for (m in methods) {
+      ph[[m]] <- .compare(tm, V, df_t, ms_t, m, alpha,
+                          n = table(trt), response = response)
     }
   }
-  
-  # Bartlett's test for homogeneity of error variances
-  if (verbose) {
-    cat("\n\n")
-    cat("           HOMOGENEITY OF ERROR VARIANCES (Bartlett's Test)           \n")
-    cat("\n")
+  treatment_means <- data.frame(Treatment = names(tm), Mean = as.numeric(tm),
+                                stringsAsFactors = FALSE)
+  if (length(methods) > 0) {
+    treatment_means$Group <- ph[[methods[1]]]$letters[treatment_means$Treatment]
   }
-  
-  # Calculate Bartlett's test manually
-  mse_pooled <- sum(df_error_values * mse_values) / sum(df_error_values)
-  
-  numerator <- sum(df_error_values) * log(mse_pooled) - sum(df_error_values * log(mse_values))
-  c_factor <- 1 + (1 / (3 * (e - 1))) * (sum(1 / df_error_values) - 1 / sum(df_error_values))
-  chi_sq <- numerator / c_factor
-  p_bartlett <- 1 - pchisq(chi_sq, e - 1)
-  
-  if (verbose) {
-    cat(sprintf("\nBartlett's Chi-square: %.4f\n", chi_sq))
-    cat(sprintf("Degrees of freedom: %d\n", e - 1))
-    cat(sprintf("P-value: %.4f\n", p_bartlett))
+  treatment_means <- treatment_means[order(-treatment_means$Mean), ,
+                                     drop = FALSE]
+  rownames(treatment_means) <- NULL
+  im <- tapply(y, list(trt, env), mean)
+  interaction_table <- data.frame(Treatment = rownames(im),
+                                  as.data.frame.matrix(im),
+                                  Mean = as.numeric(tm[rownames(im)]),
+                                  check.names = FALSE,
+                                  stringsAsFactors = FALSE)
+  rownames(interaction_table) <- NULL
+  env_means <- data.frame(Environment = env_levels,
+                          Mean = as.numeric(tapply(y, env, mean)[env_levels]),
+                          stringsAsFactors = FALSE)
 
-    if (p_bartlett < 0.05) {
-      cat("WARNING: Error variances are heterogeneous (p < 0.05)\n")
-      cat("Consider data transformation or weighted analysis.\n")
-    } else {
-      cat("Error variances are homogeneous. Pooling is appropriate.\n")
-    }
-  }
-  
-  # Pooled ANOVA
-  if (verbose) {
-    cat("\n\n")
-    cat("                        POOLED ANALYSIS OF VARIANCE                   \n")
-    cat("\n")
-  }
-  
-  # Create nested block factor
-  data$block_nested <- interaction(data[[environment]], data[[block]])
-  
-  # Fit pooled model
-  formula_pooled <- as.formula(paste(response, "~", environment, "+", 
-                                      environment, ":", block, "+",
-                                      treatment, "+", environment, ":", treatment))
-  model_pooled <- aov(formula_pooled, data = data)
-  anova_pooled <- anova(model_pooled)
-  
-  if (verbose) {
-    print(anova_pooled)
-  }
-  
-  # Calculate pooled statistics
-  pooled_error_df <- anova_pooled$Df[length(anova_pooled$Df)]
-  pooled_error_ms <- anova_pooled$`Mean Sq`[length(anova_pooled$`Mean Sq`)]
-  
-  grand_mean <- mean(data[[response]], na.rm = TRUE)
-  cv_pooled <- sqrt(pooled_error_ms) / grand_mean * 100
-  
-  # SE and CD for different comparisons
-  se_treatment <- sqrt(pooled_error_ms / (e * r))
-  cd_treatment_5 <- qt(0.975, pooled_error_df) * sqrt(2 * pooled_error_ms / (e * r))
-  
-  se_env <- sqrt(pooled_error_ms / (t * r))
-  cd_env_5 <- qt(0.975, pooled_error_df) * sqrt(2 * pooled_error_ms / (t * r))
-  
-  se_interaction <- sqrt(pooled_error_ms / r)
-  cd_interaction_5 <- qt(0.975, pooled_error_df) * sqrt(2 * pooled_error_ms / r)
-  
-  if (verbose) {
-    cat("\n\n")
-    cat("                        POOLED SUMMARY STATISTICS                     \n")
-    cat("\n")
-    cat(sprintf(" Grand Mean                    : %10.2f                         \n", grand_mean))
-    cat(sprintf(" Pooled CV (%%)                 : %10.2f                         \n", cv_pooled))
-    cat("\n")
-    cat(" For comparing TREATMENT means:                                       \n")
-    cat(sprintf("   SE(m)  : %10.3f    CD(5%%) : %10.3f                        \n", se_treatment, cd_treatment_5))
-    cat("\n")
-    cat(" For comparing ENVIRONMENT means:                                     \n")
-    cat(sprintf("   SE(m)  : %10.3f    CD(5%%) : %10.3f                        \n", se_env, cd_env_5))
-    cat("\n")
-    cat(" For comparing INTERACTION means:                                     \n")
-    cat(sprintf("   SE(m)  : %10.3f    CD(5%%) : %10.3f                        \n", se_interaction, cd_interaction_5))
-    cat("\n")
-  }
-  
-  # Treatment means across environments
-  treatment_means <- aggregate(data[[response]], by = list(data[[treatment]]), 
-                                FUN = mean, na.rm = TRUE)
-  names(treatment_means) <- c("Treatment", "Mean")
-  treatment_means <- treatment_means[order(-treatment_means$Mean), ]
-  
-  if (verbose) {
-    cat("\n\n")
-    cat("                   TREATMENT MEANS (Across Environments)              \n")
-    cat("\n")
-    for (i in 1:nrow(treatment_means)) {
-      cat(sprintf(" %-31s  %34.2f \n", 
-                  as.character(treatment_means$Treatment[i]), treatment_means$Mean[i]))
-    }
-    cat("\n")
-  }
-  
-  # Interaction means table
-  interaction_means <- aggregate(data[[response]], 
-                                  by = list(data[[treatment]], data[[environment]]), 
-                                  FUN = mean, na.rm = TRUE)
-  names(interaction_means) <- c("Treatment", "Environment", "Mean")
-  interaction_table <- reshape(interaction_means, idvar = "Treatment", 
-                                timevar = "Environment", direction = "wide")
-  
-  if (verbose) {
-    cat("\n\n")
-    cat("                   TREATMENT  ENVIRONMENT MEANS                      \n")
-    cat("\n")
-    print(interaction_table, row.names = FALSE)
-  }
-  
-  # Return results
   result <- list(
     design = "Pooled RBD",
-    pooled_anova = anova_pooled,
-    individual_anovas = individual_anovas,
-    model = model_pooled,
-    grand_mean = grand_mean,
-    cv = cv_pooled,
-    bartlett_test = list(chi_sq = chi_sq, df = e - 1, p_value = p_bartlett),
-    se_treatment = se_treatment,
-    cd_treatment = cd_treatment_5,
+    response = response,
+    factors = c(treatment = treatment, environment = environment,
+                block = block),
+    env_effect = env_effect,
+    pooled_anova = pooled,
+    anova_table = pooled,
+    individual_anovas = individual,
+    environment_summary = env_summary,
+    model = model,
+    grand_mean = gm,
+    cv = 100 * sqrt(ms_e) / gm,
+    bartlett_test = bartlett,
+    ms_error = ms_e,
+    df_error = df_e,
+    se_treatment = se_t,
+    cd_treatment = cd_t,
     se_environment = se_env,
-    cd_environment = cd_env_5,
-    se_interaction = se_interaction,
-    cd_interaction = cd_interaction_5,
+    cd_environment = cd_env,
+    se_interaction = se_int,
+    cd_interaction = cd_int,
+    alpha = alpha,
     treatment_means = treatment_means,
+    env_means = env_means,
     interaction_means = interaction_table,
-    mse_values = mse_values
+    letters_method = .letters_method(methods),
+    posthoc = ph,
+    mse_values = stats::setNames(mse_values, env_levels),
+    balanced = balanced
   )
-  
   class(result) <- c("aridagri_pooled", "list")
-  return(invisible(result))
+  if (verbose) print(result)
+  invisible(result)
+}
+
+
+#' Print Method for Combined RCBD Analysis
+#'
+#' @param x An object of class \code{aridagri_pooled}.
+#' @param digits Number of decimal places for means. Default 2.
+#' @param ... Unused.
+#'
+#' @return Invisibly returns \code{x}.
+#'
+#' @export
+print.aridagri_pooled <- function(x, digits = 2, ...) {
+  f <- x$factors
+  .print_info("COMBINED ANALYSIS OF RCBD OVER ENVIRONMENTS",
+              c(Response = x$response, Treatment = f[["treatment"]],
+                Environment = paste0(f[["environment"]], " (", x$env_effect,
+                                     ")"),
+                Treatments = nrow(x$treatment_means),
+                Environments = nrow(x$environment_summary)))
+  cat("\n Analysis of each environment\n")
+  es <- x$environment_summary
+  es$Mean <- round(es$Mean, digits)
+  es$MSE <- signif(es$MSE, 5)
+  es$CV <- round(es$CV, 2)
+  es$F_value <- round(es$F_value, 3)
+  es$p_value <- signif(es$p_value, 3)
+  es$CD <- round(es$CD, 3)
+  print(es, row.names = FALSE)
+  b <- x$bartlett_test
+  cat(sprintf(paste0("\n Bartlett's test of error variances: chi-square = ",
+                     "%.3f, df = %d, p = %.4f (%s)\n"),
+              b$chi_sq, b$df, b$p_value,
+              if (b$homogeneous) "homogeneous, pooling is valid" else
+                "heterogeneous, interpret pooling with care"))
+  den_t <- if (x$env_effect == "fixed") "pooled error" else "T x E"
+  labs <- c("Environment", "Blocks within env.", "Treatment",
+            "Treatment x Environment", "Pooled error")
+  .print_anova_df(x$pooled_anova, labs,
+                  title = paste0("Combined analysis of variance (treatment ",
+                                 "tested against ", den_t, ")"))
+  cat(sprintf("\n Grand mean = %.3f   Pooled CV = %.2f%%\n", x$grand_mean,
+              x$cv))
+  a <- 100 * x$alpha
+  cat(sprintf(" Treatment means   : SEm = %.3f   CD (%g%%) = %.3f\n",
+              x$se_treatment, a, x$cd_treatment))
+  cat(sprintf(" Environment means : SEm = %.3f   CD (%g%%) = %.3f\n",
+              x$se_environment, a, x$cd_environment))
+  cat(sprintf(" T within E        : SEm = %.3f   CD (%g%%) = %.3f\n",
+              x$se_interaction, a, x$cd_interaction))
+  ttl <- if (is.na(x$letters_method)) "Treatment means over environments" else
+    sprintf("Treatment means over environments (%s)", x$letters_method)
+  .print_means(x$treatment_means, ttl, digits)
+  invisible(x)
 }

@@ -2,7 +2,7 @@
 % Please edit documentation in R/agronomic_analysis.R
 \name{thermal_indices}
 \alias{thermal_indices}
-\title{Growing Degree Days (GDD) and Thermal Indices}
+\title{Growing Degree Days and Thermal Indices}
 \usage{
 thermal_indices(
   tmax,
@@ -12,39 +12,70 @@ thermal_indices(
   day_length = NULL,
   crop_yield = NULL,
   biomass = NULL,
-  verbose = TRUE
+  verbose = TRUE,
+  upper_temp = NULL,
+  method = c("average", "modified")
 )
 }
 \arguments{
-\item{tmax}{Vector of daily maximum temperatures (C)}
+\item{tmax}{Daily maximum temperature (degrees C).}
 
-\item{tmin}{Vector of daily minimum temperatures (C)}
+\item{tmin}{Daily minimum temperature (degrees C).}
 
-\item{base_temp}{Base temperature (C)}
+\item{base_temp}{Base temperature (degrees C). Default 10.}
 
-\item{sunshine_hours}{Vector of daily sunshine hours (optional)}
+\item{sunshine_hours}{Daily bright sunshine hours (optional, for HTU).}
 
-\item{day_length}{Vector of day length in hours (optional)}
+\item{day_length}{Daily day length in hours (optional, for PTU); see
+\code{\link{day_length}}.}
 
-\item{crop_yield}{Crop yield for HUE calculation (optional)}
+\item{crop_yield}{Economic yield (kg/ha) for HUE (optional).}
 
-\item{biomass}{Biomass for HUE calculation (optional)}
+\item{biomass}{Total biomass (kg/ha) for HUE (optional).}
 
-\item{verbose}{Logical. If TRUE (default), prints formatted output to console.}
+\item{verbose}{Logical. If TRUE (default), prints the results.}
+
+\item{upper_temp}{Optional upper threshold temperature (degrees C)
+above which development does not increase.}
+
+\item{method}{\code{"average"} (default): GDD = max(0, (Tmax + Tmin)/2 -
+Tbase), with the mean capped at \code{upper_temp}. \code{"modified"}:
+Tmax and Tmin are each limited to the range from \code{base_temp} to
+\code{upper_temp} before averaging (McMaster and Wilhelm, 1997,
+method 2).}
 }
 \value{
-List with thermal indices
+An object of class \code{aridagri_thermal}: a list with
+  \code{summary} (index, value, unit), \code{gdd_total} and
+  \code{daily} (daily and cumulative GDD, HTU and PTU).
 }
 \description{
-Calculates Growing Degree Days, Helio-thermal Units, Photo-thermal Units,
-and Heat Use Efficiency from temperature data.
+Growing degree days (GDD), helio-thermal units (HTU), photo-thermal
+units (PTU), heat use efficiency (HUE) and helio-thermal use efficiency
+from daily temperatures.
+}
+\details{
+HTU = sum of GDD x bright sunshine hours; PTU = sum of GDD x day length
+(Rajput, 1980). HUE = yield / GDD (kg/ha per degree-day); HTUE = yield /
+HTU.
 }
 \examples{
-tmax <- runif(90, 30, 42)
-tmin <- runif(90, 18, 28)
-thermal_indices(tmax, tmin, base_temp = 10)
+tmax <- c(31, 33, 35, 36, 38, 40, 41, 39, 37, 36)
+tmin <- c(16, 17, 19, 20, 22, 24, 25, 24, 22, 21)
+thermal_indices(tmax, tmin, base_temp = 10, upper_temp = 40,
+                sunshine_hours = rep(9.5, 10),
+                day_length = day_length(28, 70:79), crop_yield = 1250)
 
 }
+\references{
+McMaster, G.S. and Wilhelm, W.W. (1997). Growing degree-days: one
+equation, two interpretations. \emph{Agricultural and Forest
+Meteorology}, 87(4), 291-300. \doi{10.1016/S0168-1923(97)00027-0}
+
+Rajput, R.P. (1980). Response of soybean crop to climatic and soil
+environments. PhD thesis, IARI, New Delhi.
+}
 \author{
-Lalit Kumar Rolaniya, Ram Lal Jat, Monika Punia, Raja Ram Choudhary
+Lalit Kumar Rolaniya, Ram Lal Jat, Monika Punia, Raja Ram
+  Choudhary, Hemant Poonia
 }

@@ -2,38 +2,38 @@
 % Please edit documentation in R/aridagri-package.R
 \name{export_results}
 \alias{export_results}
-\title{Export Results to Publication Format}
+\title{Export Results to Excel or CSV}
 \usage{
 export_results(x, file, format = "xlsx", digits = 3, verbose = TRUE)
 }
 \arguments{
-\item{x}{An object from aridagri analysis functions}
+\item{x}{An aridagri result object or a data frame.}
 
-\item{file}{Output file path}
+\item{file}{Output file path.}
 
-\item{format}{Output format: \code{"xlsx"} (default) or \code{"csv"}}
+\item{format}{\code{"xlsx"} (default; needs \pkg{writexl}) or
+\code{"csv"} (the first table only).}
 
-\item{digits}{Number of decimal places}
+\item{digits}{Number of decimal places for numeric columns.}
 
-\item{verbose}{Logical. If TRUE (default), prints formatted output to console.}
+\item{verbose}{Logical. If TRUE (default), prints the file name.}
 }
 \value{
-Invisibly returns the file path
+Invisibly returns the file path.
 }
 \description{
-Exports aridagri analysis results to Excel format for publication.
+Writes the main tables of an aridagri result to an Excel workbook (one
+sheet per table) or a CSV file. Multi-trait tables from
+\code{\link{anova_traits}} are written as they appear in the report.
 }
 \examples{
-\donttest{
-df <- data.frame(
-  yield = c(1200, 1350, 1100, 1450, 1280),
-  wue = c(4.2, 4.8, 3.9, 5.1, 4.5)
-)
-result <- correlation_analysis(df, plot = FALSE)
-export_results(result, tempfile(fileext = ".xlsx"))
-}
+data(mothbean_rbd)
+res <- anova_rbd(mothbean_rbd, "seed_yield", "treatment", "block",
+                 verbose = FALSE)
+export_results(res, tempfile(fileext = ".csv"), format = "csv")
 
 }
 \author{
-Lalit Kumar Rolaniya, Ram Lal Jat, Monika Punia, Raja Ram Choudhary
+Lalit Kumar Rolaniya, Ram Lal Jat, Monika Punia, Raja Ram
+  Choudhary, Hemant Poonia
 }

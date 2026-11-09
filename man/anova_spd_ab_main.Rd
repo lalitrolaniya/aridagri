@@ -2,7 +2,7 @@
 % Please edit documentation in R/design_split_plot.R
 \name{anova_spd_ab_main}
 \alias{anova_spd_ab_main}
-\title{Split Plot Design with AB in Main Plot}
+\title{Split-Plot Design with Two Factors in the Main Plot}
 \usage{
 anova_spd_ab_main(
   data,
@@ -17,52 +17,49 @@ anova_spd_ab_main(
 )
 }
 \arguments{
-\item{data}{Data frame containing the experimental data}
+\item{data}{Data frame containing the experimental data.}
 
-\item{response}{Name of the response variable}
+\item{response}{Name of the response variable.}
 
-\item{main_factor1}{First factor in main plot (A)}
+\item{main_factor1}{First main-plot factor (A).}
 
-\item{main_factor2}{Second factor in main plot (B)}
+\item{main_factor2}{Second main-plot factor (B).}
 
-\item{sub_plot}{Sub-plot factor (C)}
+\item{sub_plot}{Sub-plot factor (C).}
 
-\item{replication}{Name of replication factor}
+\item{replication}{Name of the replication column.}
 
-\item{posthoc}{Post-hoc test method}
+\item{posthoc}{Method for the letters (default \code{"lsd"}).}
 
-\item{alpha}{Significance level}
+\item{alpha}{Significance level. Default 0.05.}
 
-\item{verbose}{Logical. If TRUE (default), prints formatted output to console.}
+\item{verbose}{Logical. If TRUE (default), prints the report.}
 }
 \value{
-List containing ANOVA table and means
+An object of class \code{aridagri_spd_ab} with the corrected
+  \code{anova_table}, \code{cv}, error mean squares and df,
+  \code{se_cd} (SEm, SEd and CD for every main effect and interaction
+  comparison), \code{factor_means} (with letters), \code{letters},
+  \code{interaction_means} and \code{model}.
 }
 \description{
-Performs ANOVA for Split Plot Design where main plot contains factorial 
-combination of two factors (AB) and sub-plot contains factor C.
-Common in irrigation  variety as main plot and nitrogen as sub-plot.
-}
-\details{
-Design structure:
-\itemize{
-  \item Main Plot: A  B factorial
-  \item Sub-Plot: C
-  \item Error (a): For testing A, B, and AB
-  \item Error (b): For testing C and all interactions with C
-}
+Split-plot design where the main plots carry the factorial combination
+of two factors (A x B) and the sub-plots carry factor C. A, B and A x B
+are tested against Error(a); C and every interaction with C against
+Error(b).
 }
 \examples{
-data <- data.frame(
-  rep = rep(1:3, each = 24),
-  irrigation = rep(rep(c("I1", "I2"), each = 12), 3),
-  variety = rep(rep(c("V1", "V2", "V3"), each = 4), 6),
-  nitrogen = rep(c("N0", "N1", "N2", "N3"), 18),
-  yield = rnorm(72, 1200, 150)
-)
-anova_spd_ab_main(data, response = "yield", 
-                  main_factor1 = "irrigation", main_factor2 = "variety",
-                  sub_plot = "nitrogen", replication = "rep")
+data <- expand.grid(rep = 1:3, irrigation = c("I1", "I2"),
+                    variety = c("V1", "V2", "V3"),
+                    nitrogen = c("N0", "N1", "N2", "N3"))
+set.seed(3)
+data$yield <- rnorm(nrow(data), 1200, 80)
+res <- anova_spd_ab_main(data, response = "yield",
+                         main_factor1 = "irrigation",
+                         main_factor2 = "variety",
+                         sub_plot = "nitrogen", replication = "rep",
+                         verbose = FALSE)
+res$anova_table
 
 }
 \author{

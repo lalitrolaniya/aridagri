@@ -1,0 +1,91 @@
+url: https://lalitrolaniya.github.io/aridagri/
+template:
+  bootstrap: 5
+
+navbar:
+  structure:
+    left: [intro, reference, articles, news]
+    right: [search, github]
+
+reference:
+- title: Single-factor designs
+  contents:
+  - anova_crd
+  - anova_rbd
+  - anova_latin
+- title: Factorial designs
+  contents:
+  - anova_factorial
+  - anova_factorial_3way
+- title: Split-plot family
+  contents:
+  - anova_spd
+  - anova_spd_ab_main
+  - anova_spd_c_main_ab_sub
+  - anova_spd_ab_cd
+  - anova_sspd
+  - anova_strip
+- title: Combined analysis over environments
+  contents:
+  - anova_rbd_pooled
+  - anova_spd_pooled
+  - anova_sspd_pooled
+- title: Breeding and germplasm designs
+  contents:
+  - anova_augmented
+  - anova_alpha_lattice
+- title: Repeated measures
+  contents:
+  - anova_repeated
+- title: Publication tables
+  contents:
+  - anova_traits
+  - export_results
+- title: Mean comparisons and diagnostics
+  contents:
+  - perform_posthoc
+  - compare_means
+  - check_assumptions
+- title: Genotype x environment analysis
+  contents:
+  - stability_analysis
+  - gge_biplot
+- title: Agronomic indices
+  contents:
+  - thermal_indices
+  - day_length
+  - crop_growth_analysis
+  - harvest_index
+  - yield_gap_analysis
+  - nue_calculate
+  - nutrient_response
+  - economic_indices
+  - economic_analysis
+- title: Multivariate methods
+  contents:
+  - correlation_analysis
+  - pca_analysis
+  - path_analysis
+  - sem_analysis
+- title: Figures
+  contents:
+  - plot_means
+  - plot_interaction
+  - plot_stability
+  - plot_response
+  - plot.aridagri
+  - plot.aridagri_gge
+  - theme_aridagri
+  - arid_plot
+- title: Example datasets
+  contents:
+  - mothbean_rbd
+  - clusterbean_spd
+  - pearlmillet_met
+  - chickpea_augmented
+  - cowpea_alpha
+  - mungbean_repeated
+- title: Print methods and package
+  contents:
+  - starts_with("print.")
+  - aridagri-package

@@ -2,12 +2,7 @@
 % Please edit documentation in R/design_additional.R
 \name{anova_strip}
 \alias{anova_strip}
-\title{============================================================================
-ADDITIONAL EXPERIMENTAL DESIGN FUNCTIONS
-Package: aridagri
-Authors: Lalit Kumar Rolaniya, Ram Lal Jat, Monika Punia, Raja Ram Choudhary
-============================================================================
-Strip Plot Design ANOVA}
+\title{Strip-Plot (Strip-Block) Design ANOVA}
 \usage{
 anova_strip(
   data,
@@ -16,42 +11,63 @@ anova_strip(
   vertical_factor,
   replication,
   alpha = 0.05,
-  verbose = TRUE
+  verbose = TRUE,
+  posthoc = "lsd"
 )
 }
 \arguments{
-\item{data}{Data frame containing the experimental data}
+\item{data}{Data frame containing the experimental data.}
 
-\item{response}{Name of the response variable}
+\item{response}{Name of the response variable.}
 
-\item{horizontal_factor}{Factor applied in horizontal strips (A)}
+\item{horizontal_factor}{Factor applied in horizontal strips (A).}
 
-\item{vertical_factor}{Factor applied in vertical strips (B)}
+\item{vertical_factor}{Factor applied in vertical strips (B).}
 
-\item{replication}{Name of replication factor}
+\item{replication}{Name of the replication column.}
 
-\item{alpha}{Significance level}
+\item{alpha}{Significance level. Default 0.05.}
 
-\item{verbose}{Logical. If TRUE (default), prints formatted output to console.}
+\item{verbose}{Logical. If TRUE (default), prints the report.}
+
+\item{posthoc}{Method for the letters (default \code{"lsd"}).}
 }
 \value{
-List containing ANOVA results
+An object of class \code{aridagri_strip} with the corrected
+  \code{anova_table}, \code{cv} (a, b, c), error mean squares and df,
+  \code{se_cd}, \code{horizontal_means} and \code{vertical_means} (with
+  letters), \code{interaction_means}, \code{letters} and \code{model}.
 }
 \description{
-Performs ANOVA for Strip Plot (Strip-Split) Design where two factors
-are applied in horizontal and vertical strips.
+Analysis of variance for a strip-plot design, where factor A is applied
+to horizontal strips and factor B to vertical strips in each
+replication. A is tested against Error(a) = Rep x A, B against
+Error(b) = Rep x B, and A x B against Error(c). Gives CV(a), CV(b),
+CV(c), SEm, SEd and CD for the four standard comparisons, and letter
+groupings.
+}
+\details{
+Standard errors of difference (Gomez and Gomez, 1984, table 3.15), with
+\eqn{a} and \eqn{b} levels of A and B and \eqn{r} replications:
+A means \eqn{\sqrt{2E_a/(rb)}}; B means \eqn{\sqrt{2E_b/(ra)}}; A means
+at the same level of B \eqn{\sqrt{2[(b-1)E_c + E_a]/(rb)}}; B means at
+the same level of A \eqn{\sqrt{2[(a-1)E_c + E_b]/(ra)}}. The last two
+use the weighted t of Cochran and Cox.
 }
 \examples{
-data <- expand.grid(
-  rep = 1:4,
-  irrigation = c("I1", "I2", "I3"),
-  tillage = c("CT", "MT", "ZT")
-)
-data$yield <- rnorm(nrow(data), 1200, 150)
+data <- expand.grid(rep = 1:4, irrigation = c("I1", "I2", "I3"),
+                    tillage = c("CT", "MT", "ZT"))
+set.seed(9)
+data$yield <- rnorm(nrow(data), 1200, 70)
 anova_strip(data, response = "yield", horizontal_factor = "irrigation",
             vertical_factor = "tillage", replication = "rep")
 
 }
+\references{
+Gomez, K.A. and Gomez, A.A. (1984). \emph{Statistical Procedures for
+Agricultural Research}, 2nd ed. John Wiley and Sons, New York.
+}
 \author{
-Lalit Kumar Rolaniya, Ram Lal Jat, Monika Punia, Raja Ram Choudhary
+Lalit Kumar Rolaniya, Ram Lal Jat, Monika Punia, Raja Ram
+  Choudhary, Hemant Poonia
 }

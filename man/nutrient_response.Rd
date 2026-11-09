@@ -2,7 +2,7 @@
 % Please edit documentation in R/nutrient_functions.R
 \name{nutrient_response}
 \alias{nutrient_response}
-\title{Nutrient Response Curve Analysis}
+\title{Nutrient Response Curves and Economic Optimum Dose}
 \usage{
 nutrient_response(
   dose,
@@ -14,31 +14,68 @@ nutrient_response(
 )
 }
 \arguments{
-\item{dose}{Numeric vector of nutrient doses (kg/ha)}
+\item{dose}{Numeric vector of nutrient doses (kg/ha).}
 
-\item{yield}{Numeric vector of corresponding yields (kg/ha)}
+\item{yield}{Numeric vector of yields (kg/ha), one per dose (replicated
+doses are allowed).}
 
-\item{model}{Model type: "quadratic", "linear_plateau", or "mitscherlich"}
+\item{model}{\code{"quadratic"} (default), \code{"linear_plateau"},
+\code{"quadratic_plateau"}, \code{"mitscherlich"} or \code{"all"}.}
 
-\item{price_output}{Price of output (Rs/kg)}
+\item{price_output}{Price of the produce (Rs/kg).}
 
-\item{price_nutrient}{Price of nutrient (Rs/kg)}
+\item{price_nutrient}{Price of the nutrient (Rs/kg of nutrient).}
 
-\item{verbose}{Logical. If TRUE (default), prints formatted output to console.}
+\item{verbose}{Logical. If TRUE (default), prints the results.}
 }
 \value{
-List with model parameters and economic optimum
+For a single model, an object of class \code{aridagri_response}
+  with \code{model}, \code{coefficients}, \code{r_squared},
+  \code{adj_r_squared}, \code{rmse}, \code{aic}, \code{dose_max_yield},
+  \code{max_yield}, \code{dose_economic}, \code{yield_economic} and
+  \code{fit}. For \code{model = "all"}, a list with \code{comparison}
+  (one row per model), \code{models} and \code{best} (lowest AIC).
 }
 \description{
-Fits nutrient response curves using quadratic, linear-plateau, or 
-Mitscherlich models to determine economic optimum dose.
+Fits nutrient response models and finds the dose for maximum yield and
+the economic optimum dose, where the marginal return equals the price
+ratio. Quadratic, linear-plateau, quadratic-plateau and Mitscherlich
+models are available; \code{model = "all"} fits all four and compares
+them.
+}
+\details{
+\itemize{
+  \item Quadratic: \eqn{Y = a + bX + cX^2}; maximum at \eqn{-b/(2c)};
+    economic optimum \eqn{(P_n/P_y - b)/(2c)}.
+  \item Linear-plateau: \eqn{Y = a + b \min(X, X_0)}; economic optimum
+    at the join point \eqn{X_0} when \eqn{b > P_n/P_y}.
+  \item Quadratic-plateau: quadratic up to its vertex \eqn{X_0}, then
+    flat.
+  \item Mitscherlich: \eqn{Y = A - B e^{-cX}}; economic optimum
+    \eqn{\ln(B c P_y / P_n)/c}; also the dose giving 95\% of the
+    asymptote.
+}
+Plateau models are fitted by profile least squares over the join
+point; the Mitscherlich model by \code{nls} with a self-starting model.
+All four models have three parameters (the join point counts as one), so
+they are compared by R-squared, adjusted R-squared, RMSE and AIC on an
+equal footing (AIC differences equal those of \code{stats::AIC()}). An
+optimum beyond the highest dose tested is flagged as an extrapolation.
 }
 \examples{
 dose <- c(0, 20, 40, 60, 80, 100)
 yield <- c(1100, 1350, 1520, 1610, 1650, 1660)
-nutrient_response(dose, yield, model = "quadratic", 
+nutrient_response(dose, yield, model = "quadratic",
                   price_output = 60, price_nutrient = 15)
+nutrient_response(dose, yield, model = "all", price_output = 60,
+                  price_nutrient = 15)
 
+}
+\references{
+Cerrato, M.E. and Blackmer, A.M. (1990). Comparison of models for
+describing corn yield response to nitrogen fertilizer. \emph{Agronomy
+Journal}, 82(1), 138-143.
+\doi{10.2134/agronj1990.00021962008200010030x}
 }
 \author{
 Lalit Kumar Rolaniya, ICAR-IIPR, Bikaner

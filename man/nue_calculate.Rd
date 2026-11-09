@@ -2,7 +2,7 @@
 % Please edit documentation in R/nutrient_functions.R
 \name{nue_calculate}
 \alias{nue_calculate}
-\title{Nutrient Use Efficiency Calculations}
+\title{Nutrient Use Efficiency Indices}
 \usage{
 nue_calculate(
   yield_fertilized,
@@ -16,52 +16,68 @@ nue_calculate(
 )
 }
 \arguments{
-\item{yield_fertilized}{Yield with fertilizer application (kg/ha)}
+\item{yield_fertilized}{Grain yield with the nutrient (kg/ha).}
 
-\item{yield_control}{Yield in control/unfertilized plot (kg/ha)}
+\item{yield_control}{Grain yield of the control without the nutrient
+(kg/ha).}
 
-\item{nutrient_applied}{Amount of nutrient applied (kg/ha)}
+\item{nutrient_applied}{Nutrient applied (kg/ha), greater than 0.}
 
-\item{nutrient_uptake_fert}{Nutrient uptake in fertilized plot (kg/ha), optional}
+\item{nutrient_uptake_fert}{Total nutrient uptake with the nutrient
+(kg/ha), optional.}
 
-\item{nutrient_uptake_ctrl}{Nutrient uptake in control plot (kg/ha), optional}
+\item{nutrient_uptake_ctrl}{Total nutrient uptake of the control
+(kg/ha), optional.}
 
-\item{biomass_fert}{Total biomass in fertilized plot (kg/ha), optional}
+\item{biomass_fert}{Total biomass with the nutrient (kg/ha), optional.}
 
-\item{biomass_ctrl}{Total biomass in control plot (kg/ha), optional}
+\item{biomass_ctrl}{Total biomass of the control (kg/ha), optional.}
 
-\item{verbose}{Logical. If TRUE (default), prints formatted output to console.}
+\item{verbose}{Logical. If TRUE (default), prints the table.}
 }
 \value{
-Data frame with efficiency indices
+A data frame of class \code{aridagri_nue}.
 }
 \description{
-Comprehensive nutrient use efficiency calculations including Agronomic Efficiency (AE),
-Physiological Efficiency (PE), Apparent Recovery Efficiency (ARE), and Partial Factor
-Productivity (PFP). Essential for INM research in arid regions.
+Agronomic efficiency (AE), partial factor productivity (PFP), apparent
+recovery efficiency (ARE), physiological efficiency (PE), internal
+utilization efficiency (IE) and, when biomass is given, the
+biomass-based physiological efficiency and utilization efficiency of
+Fageria and Baligar (2005). All arguments may be vectors (one value per
+treatment).
 }
 \details{
-Efficiency calculations:
 \itemize{
-  \item AE (Agronomic Efficiency) = (Yield_fert - Yield_ctrl) / Nutrient_applied
-  \item PFP (Partial Factor Productivity) = Yield_fert / Nutrient_applied
-  \item ARE (Apparent Recovery Efficiency) = (Uptake_fert - Uptake_ctrl) / Nutrient_applied  100
-  \item PE (Physiological Efficiency) = (Yield_fert - Yield_ctrl) / (Uptake_fert - Uptake_ctrl)
+  \item AE = (Yf - Yc) / N (kg grain per kg nutrient)
+  \item PFP = Yf / N
+  \item ARE = 100 (Uf - Uc) / N (percent)
+  \item PE = (Yf - Yc) / (Uf - Uc) (kg grain per kg nutrient taken up;
+    called agro-physiological efficiency by Fageria and Baligar)
+  \item IE = Yf / Uf
+  \item PE_biomass = (Bf - Bc) / (Uf - Uc) and UE = PE_biomass x ARE /
+    100 (Fageria and Baligar, 2005)
 }
+AE = PE x ARE / 100 holds by definition. PE is not computed when the
+uptake difference is zero or negative.
 }
 \examples{
-# Basic NUE calculation
-nue_calculate(yield_fertilized = 1850, yield_control = 1200, nutrient_applied = 40)
+nue_calculate(yield_fertilized = 1850, yield_control = 1200,
+              nutrient_applied = 40)
+# Several N doses with uptake and biomass
+nue_calculate(yield_fertilized = c(1450, 1720, 1850),
+              yield_control = 1200, nutrient_applied = c(20, 40, 60),
+              nutrient_uptake_fert = c(48, 61, 68),
+              nutrient_uptake_ctrl = 35,
+              biomass_fert = c(4300, 4950, 5300), biomass_ctrl = 3600)
 
-# Complete NUE with uptake data
-nue_calculate(
-  yield_fertilized = 1850, 
-  yield_control = 1200,
-  nutrient_applied = 40,
-  nutrient_uptake_fert = 65,
-  nutrient_uptake_ctrl = 35
-)
+}
+\references{
+Dobermann, A. (2005). Nitrogen use efficiency - state of the art. IFA
+International Workshop on Enhanced-Efficiency Fertilizers, Frankfurt.
 
+Fageria, N.K. and Baligar, V.C. (2005). Enhancing nitrogen use
+efficiency in crop plants. \emph{Advances in Agronomy}, 88, 97-185.
+\doi{10.1016/S0065-2113(05)88004-6}
 }
 \author{
 Lalit Kumar Rolaniya, ICAR-IIPR, Bikaner

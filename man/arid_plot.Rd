@@ -2,38 +2,35 @@
 % Please edit documentation in R/aridagri-package.R
 \name{arid_plot}
 \alias{arid_plot}
-\title{Visualization Functions for aridagri}
+\title{Base-Graphics Plots for aridagri Results}
 \usage{
 arid_plot(x, type = "bar", ...)
 }
 \arguments{
-\item{x}{An object from aridagri analysis functions}
+\item{x}{An object from an aridagri analysis function.}
 
-\item{type}{Plot type: "bar", "line", "interaction", "boxplot"}
+\item{type}{Kept for compatibility; bar charts are drawn.}
 
-\item{...}{Additional arguments passed to plotting functions}
+\item{...}{Unused.}
 }
 \value{
-No return value; called for its side effect of drawing a plot on the
-current graphics device. The plot produced depends on the class of \code{x}:
-a correlation heatmap for \code{aridagri_correlation} objects, a bar chart of
-treatment means for \code{aridagri_anova} objects, and a bar chart of the
-integrated stability ranking for \code{aridagri_stability} objects. Uses only
-base graphics, so no additional packages are required.
+No return value; called for its side effect of drawing a plot.
 }
 \description{
-Generate publication-quality plots for aridagri analyses.
+Quick plots with base graphics (no extra packages): bar charts of
+treatment or factor means with their letters for ANOVA results, a
+heatmap for correlation results and the integrated ranking for stability
+results. For publication figures with \pkg{ggplot2} see
+\code{\link{plot_means}} and the \code{plot()} methods.
 }
 \examples{
-df <- data.frame(
-  yield = c(1200, 1350, 1100, 1450, 1280),
-  wue = c(4.2, 4.8, 3.9, 5.1, 4.5),
-  protein = c(22.1, 23.5, 21.8, 24.2, 22.9)
-)
-result <- correlation_analysis(df, plot = FALSE)
-arid_plot(result)
+data(mothbean_rbd)
+res <- anova_rbd(mothbean_rbd, "seed_yield", "treatment", "block",
+                 verbose = FALSE)
+arid_plot(res)
 
 }
 \author{
-Lalit Kumar Rolaniya, Ram Lal Jat, Monika Punia, Raja Ram Choudhary
+Lalit Kumar Rolaniya, Ram Lal Jat, Monika Punia, Raja Ram
+  Choudhary, Hemant Poonia
 }

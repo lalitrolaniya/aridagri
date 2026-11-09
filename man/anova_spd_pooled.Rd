@@ -2,7 +2,7 @@
 % Please edit documentation in R/design_split_plot.R
 \name{anova_spd_pooled}
 \alias{anova_spd_pooled}
-\title{Pooled Split Plot Design Analysis}
+\title{Combined Split-Plot Analysis over Environments}
 \usage{
 anova_spd_pooled(
   data,
@@ -11,42 +11,55 @@ anova_spd_pooled(
   sub_plot,
   environment,
   replication,
-  verbose = TRUE
+  verbose = TRUE,
+  posthoc = "lsd",
+  alpha = 0.05
 )
 }
 \arguments{
-\item{data}{Data frame containing combined data}
+\item{data}{Data frame containing the combined data.}
 
-\item{response}{Name of the response variable}
+\item{response}{Name of the response variable.}
 
-\item{main_plot}{Name of main plot factor}
+\item{main_plot}{Name of the main-plot factor.}
 
-\item{sub_plot}{Name of sub-plot factor}
+\item{sub_plot}{Name of the sub-plot factor.}
 
-\item{environment}{Name of environment factor}
+\item{environment}{Name of the environment column.}
 
-\item{replication}{Name of replication factor (nested within environment)}
+\item{replication}{Name of the replication column (nested within
+environment; labels may repeat across environments).}
 
-\item{verbose}{Logical. If TRUE (default), prints formatted output to console.}
+\item{verbose}{Logical. If TRUE (default), prints the report.}
+
+\item{posthoc}{Method for the letters (default \code{"lsd"}).}
+
+\item{alpha}{Significance level. Default 0.05.}
 }
 \value{
-List containing pooled ANOVA and component analyses
+An object of class \code{aridagri_spd_pooled} with
+  \code{anova_table}, \code{cv} (by stratum), \code{se_cd},
+  \code{factor_means} (with letters), \code{main_means},
+  \code{sub_means}, \code{env_means} and \code{model}.
 }
 \description{
-Performs pooled analysis of Split Plot Design experiments conducted 
-across multiple environments/years/locations.
+Combined (pooled) analysis of a split-plot experiment repeated in
+several environments (years, seasons or locations). Environments are
+fixed and replications random within environments: the environment
+effect is tested against replications within environments, main-plot
+sources against the pooled Error(a) and sub-plot sources against the
+pooled Error(b). SEm, SEd and CD are given for every comparison.
 }
 \examples{
-data <- expand.grid(
-  year = c("Y1", "Y2", "Y3"),
-  rep = 1:3,
-  irrigation = c("I1", "I2", "I3"),
-  variety = c("V1", "V2", "V3", "V4")
-)
-data$yield <- rnorm(nrow(data), 1200, 180)
-
-anova_spd_pooled(data, response = "yield", main_plot = "irrigation",
-                 sub_plot = "variety", environment = "year", replication = "rep")
+data <- expand.grid(year = c("Y1", "Y2", "Y3"), rep = 1:3,
+                    irrigation = c("I1", "I2", "I3"),
+                    variety = c("V1", "V2", "V3", "V4"))
+set.seed(7)
+data$yield <- rnorm(nrow(data), 1200, 90)
+res <- anova_spd_pooled(data, response = "yield", main_plot = "irrigation",
+                        sub_plot = "variety", environment = "year",
+                        replication = "rep", verbose = FALSE)
+res$anova_table
 
 }
 \author{

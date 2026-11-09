@@ -2,7 +2,7 @@
 % Please edit documentation in R/design_basic.R
 \name{anova_rbd}
 \alias{anova_rbd}
-\title{Randomized Block Design (RBD) ANOVA}
+\title{Randomized Complete Block Design (RCBD) ANOVA}
 \usage{
 anova_rbd(
   data,
@@ -11,41 +11,66 @@ anova_rbd(
   block,
   posthoc = "lsd",
   alpha = 0.05,
-  verbose = TRUE
+  verbose = TRUE,
+  control = NULL
 )
 }
 \arguments{
-\item{data}{Data frame containing the experimental data}
+\item{data}{Data frame containing the experimental data.}
 
-\item{response}{Name of the response variable}
+\item{response}{Name of the response variable (character).}
 
-\item{treatment}{Name of treatment factor}
+\item{treatment}{Name of the treatment column.}
 
-\item{block}{Name of block/replication factor}
+\item{block}{Name of the block (replication) column.}
 
-\item{posthoc}{Post-hoc test: "lsd", "duncan", "tukey", "snk", "scheffe", or "all"}
+\item{posthoc}{Post-hoc test(s): \code{"lsd"}, \code{"duncan"},
+\code{"tukey"}, \code{"snk"}, \code{"scheffe"}, \code{"bonferroni"},
+\code{"dunnett"}, a vector of these, \code{"all"} or \code{"none"}.
+The first method supplies the letters in the means table.}
 
-\item{alpha}{Significance level (default 0.05)}
+\item{alpha}{Significance level for the CD and the post-hoc tests
+(default 0.05).}
 
-\item{verbose}{Logical. If TRUE (default), prints formatted output to console.}
+\item{verbose}{Logical. If TRUE (default), prints the report.}
+
+\item{control}{Control level for Dunnett's test (default: first level).}
 }
 \value{
-List containing ANOVA table, means, post-hoc results
+An object of class \code{aridagri_anova}. In addition to the
+  components described in \code{\link{anova_crd}} it contains
+  \code{relative_efficiency} (percent, adjusted),
+  \code{relative_efficiency_unadjusted} and \code{missing_plots}.
 }
 \description{
-Performs complete ANOVA for Randomized Block Design (RCBD) with post-hoc tests,
-assumptions checking, and publication-ready output.
+Analysis of variance for a randomized complete block design with
+standard errors, critical difference, CV, relative efficiency over a
+CRD, post-hoc letter groupings and assumption checks. Missing plots are
+handled by least squares: treatments are tested after blocks, means are
+least-squares (adjusted) means and every pair is compared with its own
+standard error.
+}
+\details{
+Relative efficiency of the RCBD over a CRD follows Gomez and Gomez
+(1984): \deqn{RE = \frac{(r - 1) E_b + r (t - 1) E_e}{(r t - 1) E_e}}
+where \eqn{E_b} and \eqn{E_e} are the block and error mean squares,
+multiplied by the precision adjustment factor
+\eqn{k = \frac{[(r-1)(t-1)+1][t(r-1)+3]}{[(r-1)(t-1)+3][t(r-1)+1]}}
+when the error degrees of freedom are below 20. Values above 100\% mean
+that blocking reduced the error.
 }
 \examples{
-data <- data.frame(
-  rep = rep(1:4, each = 5),
-  treatment = rep(c("T1", "T2", "T3", "T4", "T5"), 4),
-  yield = c(rnorm(5, 1200, 50), rnorm(5, 1250, 55),
-            rnorm(5, 1180, 45), rnorm(5, 1270, 60))
-)
-anova_rbd(data, response = "yield", treatment = "treatment", 
-          block = "rep", posthoc = "duncan")
+data(mothbean_rbd)
+res <- anova_rbd(mothbean_rbd, response = "seed_yield",
+                 treatment = "treatment", block = "block",
+                 posthoc = "duncan")
+res$treatment_means
+res$relative_efficiency
 
+}
+\references{
+Gomez, K.A. and Gomez, A.A. (1984). \emph{Statistical Procedures for
+Agricultural Research}, 2nd ed. John Wiley and Sons, New York.
 }
 \author{
 Lalit Kumar Rolaniya, ICAR-IIPR, Bikaner

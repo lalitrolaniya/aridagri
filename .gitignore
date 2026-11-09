@@ -16,3 +16,6 @@ Thumbs.db
 # IDE
 .vscode/
 *.swp
+
+# pkgdown site (built by GitHub Actions)
+docs/

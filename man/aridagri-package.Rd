@@ -4,78 +4,82 @@
 \name{aridagri-package}
 \alias{aridagri-package}
 \alias{aridagri}
-\title{aridagri: Comprehensive Statistical Tools for Agricultural Research}
+\title{aridagri: Statistical Tools for Agricultural Research}
 \description{
-The aridagri package provides comprehensive statistical and analytical tools 
-for agricultural research. It includes complete ANOVA functions for all 
-experimental designs, multiple post-hoc tests, stability analysis methods,
-thermal indices, crop growth analysis, and advanced statistical methods.
+Analysis of variance for the common field designs with correct error
+terms, standard errors, critical differences and letter groupings, plus
+stability analysis, repeated measures, thermal indices, crop growth
+analysis, nutrient use efficiency, response curves and economics.
 }
-\section{Experimental Design ANOVA Functions}{
+\section{Experimental designs}{
 
 \itemize{
-  \item \code{\link{anova_crd}}: Completely Randomized Design
-  \item \code{\link{anova_rbd}}: Randomized Block Design
-  \item \code{\link{anova_rbd_pooled}}: Pooled RBD (Multi-Environment)
-  \item \code{\link{anova_latin}}: Latin Square Design
-  \item \code{\link{anova_factorial}}: Two-Factor Factorial
-  \item \code{\link{anova_factorial_3way}}: Three-Factor Factorial
-  \item \code{\link{anova_spd}}: Split Plot Design
-  \item \code{\link{anova_sspd}}: Split-Split Plot Design
-  \item \code{\link{anova_strip}}: Strip Plot Design
-  \item \code{\link{anova_augmented}}: Augmented Block Design
-  \item \code{\link{anova_alpha_lattice}}: Alpha Lattice Design
+  \item \code{\link{anova_crd}}, \code{\link{anova_rbd}},
+    \code{\link{anova_latin}}: single-factor designs (missing plots and
+    unequal replication handled exactly)
+  \item \code{\link{anova_factorial}}, \code{\link{anova_factorial_3way}}:
+    factorial experiments
+  \item \code{\link{anova_spd}}, \code{\link{anova_spd_ab_main}},
+    \code{\link{anova_spd_c_main_ab_sub}}, \code{\link{anova_spd_ab_cd}},
+    \code{\link{anova_sspd}}, \code{\link{anova_strip}}: split-plot
+    family with SE and CD for every comparison
+  \item \code{\link{anova_rbd_pooled}}, \code{\link{anova_spd_pooled}},
+    \code{\link{anova_sspd_pooled}}: combined analysis over environments
+  \item \code{\link{anova_augmented}}, \code{\link{anova_alpha_lattice}}:
+    designs for germplasm and breeding trials
+  \item \code{\link{anova_repeated}}: repeated measures with sphericity
+    corrections and covariance-structure models
+  \item \code{\link{anova_traits}}: publication table for many traits
 }
 }
 
-\section{Post-Hoc Tests}{
+\section{Mean comparisons and diagnostics}{
 
-\itemize{
-  \item \code{\link{perform_posthoc}}: Multiple comparison tests (LSD, Duncan, Tukey, SNK, Scheffe, Bonferroni, Dunnett)
-  \item \code{\link{check_assumptions}}: ANOVA assumption checking
-}
+\code{\link{perform_posthoc}}, \code{\link{compare_means}},
+\code{\link{check_assumptions}}.
 }
 
-\section{Agronomic Analysis Functions}{
+\section{Genotype x environment analysis}{
 
-\itemize{
-  \item \code{\link{stability_analysis}}: Multi-method stability analysis (Eberhart-Russell, AMMI, Finlay-Wilkinson, Shukla, Wricke, CV, Superiority)
-  \item \code{\link{thermal_indices}}: GDD, HTU, PTU, Heat Use Efficiency
-  \item \code{\link{crop_growth_analysis}}: CGR, RGR, NAR, LAI
-  \item \code{\link{harvest_index}}: Harvest index and partitioning
-  \item \code{\link{yield_gap_analysis}}: Yield gap calculations
-  \item \code{\link{economic_indices}}: B:C ratio, net returns
-}
+\code{\link{stability_analysis}} (Eberhart-Russell, AMMI,
+Finlay-Wilkinson, Shukla, Wricke, CV, Lin-Binns) and
+\code{\link{gge_biplot}}.
 }
 
-\section{Statistical Functions}{
+\section{Agronomic indices}{
 
-\itemize{
-  \item \code{\link{correlation_analysis}}: Correlation matrix with significance
-  \item \code{\link{pca_analysis}}: Principal component analysis
-  \item \code{\link{path_analysis}}: Path coefficient analysis
-  \item \code{\link{sem_analysis}}: Structural equation modeling
-}
+\code{\link{thermal_indices}}, \code{\link{day_length}},
+\code{\link{crop_growth_analysis}}, \code{\link{harvest_index}},
+\code{\link{yield_gap_analysis}}, \code{\link{economic_indices}},
+\code{\link{economic_analysis}}, \code{\link{nue_calculate}},
+\code{\link{nutrient_response}}.
 }
 
-\section{Nutrient Analysis Functions}{
+\section{Multivariate methods}{
 
-\itemize{
-  \item \code{\link{nue_calculate}}: Nutrient use efficiency calculations
-  \item \code{\link{nutrient_response}}: Response curve analysis
-  \item \code{\link{economic_analysis}}: Economic viability assessment
+\code{\link{correlation_analysis}}, \code{\link{pca_analysis}},
+\code{\link{path_analysis}}, \code{\link{sem_analysis}}.
 }
+
+\section{Figures and export}{
+
+\code{\link{plot_means}}, \code{\link{plot_interaction}},
+\code{\link{plot_stability}}, \code{\link{plot_response}},
+\code{plot()} methods, \code{\link{theme_aridagri}} (\pkg{ggplot2});
+\code{\link{arid_plot}} (base graphics); \code{\link{export_results}}.
 }
 
 \seealso{
 Useful links:
 \itemize{
   \item \url{https://github.com/lalitrolaniya/aridagri}
+  \item \url{https://lalitrolaniya.github.io/aridagri/}
   \item Report bugs at \url{https://github.com/lalitrolaniya/aridagri/issues}
 }
 
 }
 \author{
-Lalit Kumar Rolaniya, Ram Lal Jat, Monika Punia, Raja Ram Choudhary
+Lalit Kumar Rolaniya (maintainer), Ram Lal Jat, Monika Punia
+  (deceased), Raja Ram Choudhary and Hemant Poonia (deceased)
 }
 \keyword{package}

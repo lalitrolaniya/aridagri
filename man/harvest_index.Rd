@@ -2,27 +2,30 @@
 % Please edit documentation in R/agronomic_analysis.R
 \name{harvest_index}
 \alias{harvest_index}
-\title{Harvest Index Calculation}
+\title{Harvest Index}
 \usage{
 harvest_index(grain_yield, straw_yield, verbose = TRUE)
 }
 \arguments{
-\item{grain_yield}{Grain/economic yield}
+\item{grain_yield}{Grain (economic) yield.}
 
-\item{straw_yield}{Straw/stover yield}
+\item{straw_yield}{Straw (stover) yield, in the same unit.}
 
-\item{verbose}{Logical. If TRUE (default), prints formatted output to console.}
+\item{verbose}{Logical. If TRUE (default), prints the table.}
 }
 \value{
-Data frame with harvest indices
+A data frame of class \code{aridagri_hi} with grain, straw and
+  total biomass, \code{HI_percent} and \code{Grain_Straw_Ratio}.
 }
 \description{
-Calculates Harvest Index and related partitioning indices.
+Harvest index and grain-to-straw ratio.
 }
 \examples{
-harvest_index(grain_yield = c(1200, 1350, 1100), straw_yield = c(2400, 2500, 2300))
+harvest_index(grain_yield = c(1200, 1350, 1100),
+              straw_yield = c(2400, 2500, 2300))
 
 }
 \author{
-Lalit Kumar Rolaniya, Ram Lal Jat, Monika Punia, Raja Ram Choudhary
+Lalit Kumar Rolaniya, Ram Lal Jat, Monika Punia, Raja Ram
+  Choudhary, Hemant Poonia
 }

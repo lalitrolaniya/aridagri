@@ -2,7 +2,7 @@
 % Please edit documentation in R/nutrient_functions.R
 \name{economic_analysis}
 \alias{economic_analysis}
-\title{Economic Analysis for Arid Agriculture}
+\title{Economic Analysis of a Crop}
 \usage{
 economic_analysis(
   yield,
@@ -15,33 +15,33 @@ economic_analysis(
 )
 }
 \arguments{
-\item{yield}{Crop yield (kg/ha)}
+\item{yield}{Crop yield (kg/ha).}
 
-\item{price}{Market price (Rs/kg)}
+\item{price}{Market price (Rs/kg).}
 
-\item{cost_fixed}{Fixed costs (Rs/ha)}
+\item{cost_fixed}{Fixed costs (Rs/ha).}
 
-\item{cost_variable}{Variable costs (Rs/ha)}
+\item{cost_variable}{Variable costs (Rs/ha).}
 
-\item{byproduct_yield}{Byproduct yield (kg/ha), optional}
+\item{byproduct_yield}{By-product yield (kg/ha), default 0.}
 
-\item{byproduct_price}{Byproduct price (Rs/kg), optional}
+\item{byproduct_price}{By-product price (Rs/kg), default 0.}
 
-\item{verbose}{Logical. If TRUE (default), prints formatted output to console.}
+\item{verbose}{Logical. If TRUE (default), prints the table.}
 }
 \value{
-Data frame with economic analysis
+A data frame of class \code{aridagri_economics}.
 }
 \description{
-Calculates economic indicators including Cost of Cultivation, Gross Returns,
-Net Returns, B:C Ratio, and profitability indices for arid farming systems.
+Cost of cultivation, gross and net returns, benefit-cost ratio and cost
+of production. Arguments may be vectors (one value per treatment).
 }
 \examples{
-economic_analysis(yield = 1200, price = 65, cost_fixed = 15000, cost_variable = 12000)
-
-# With byproduct
-economic_analysis(yield = 1200, price = 65, cost_fixed = 15000, 
-                  cost_variable = 12000, byproduct_yield = 1800, byproduct_price = 5)
+economic_analysis(yield = 1200, price = 65, cost_fixed = 15000,
+                  cost_variable = 12000)
+economic_analysis(yield = c(1050, 1200, 1340), price = 65,
+                  cost_fixed = 15000, cost_variable = c(11000, 12000, 13500),
+                  byproduct_yield = c(1600, 1800, 1950), byproduct_price = 5)
 
 }
 \author{
