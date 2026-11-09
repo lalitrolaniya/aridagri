@@ -2,7 +2,8 @@
 
 <!-- badges: start -->
 [![R-CMD-check](https://github.com/lalitrolaniya/aridagri/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/lalitrolaniya/aridagri/actions/workflows/R-CMD-check.yaml)
-[![CRAN status](https://www.r-pkg.org/badges/version/aridagri)](https://CRAN.R-project.org/package=aridagri)
+[![CRAN status](https://img.shields.io/cran/v/aridagri?label=CRAN)](https://CRAN.R-project.org/package=aridagri)
+[![GitHub version](https://img.shields.io/github/r-package/v/lalitrolaniya/aridagri?label=GitHub)](https://github.com/lalitrolaniya/aridagri)
 [![DOI](https://img.shields.io/badge/DOI-10.32614/CRAN.package.aridagri-blue)](https://doi.org/10.32614/CRAN.package.aridagri)
 [![Software Impacts](https://img.shields.io/badge/Software%20Impacts-10.1016/j.simpa.2026.100851-blue)](https://doi.org/10.1016/j.simpa.2026.100851)
 [![License: GPL-3](https://img.shields.io/badge/License-GPL--3-blue.svg)](https://cran.r-project.org/web/licenses/GPL-3)
